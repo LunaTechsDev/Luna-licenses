@@ -2,7 +2,7 @@
 // TestPlugin.js
 //=============================================================================
 //=============================================================================
-// Build Date: 2020-08-15 12:10:24
+// Build Date: 2020-08-15 12:13:29
 //=============================================================================
 //=============================================================================
 // Made with LunaTea -- Haxe
@@ -25,9 +25,9 @@ class TestPlugin {
 		console.log("src/TestPlugin.hx:15:",Sprite_Base);
 		/*:
      
-   @author Kino
+   @author Test
    @plugindesc An extension to the core Message Window functionality
-   to support Visual Novels <KITA_MessageExt>.
+   to support Visual Novels <TestPlugin>.
 
    @param Text Speed 
    @desc The speed at which characters will be rendered
@@ -49,7 +49,7 @@ class TestPlugin {
    Hope this plugin helps and enjoy!
    
    */
-		TestPlugin.textSpeed = PluginManager.parameters("KITA_MessageExt")["Text Speed"];
+		TestPlugin.textSpeed = PluginManager.parameters("TestPlugin")["Text Speed"];
 		console.log("src/TestPlugin.hx:43:",TestPlugin.textSpeed);
 		Window_Message = MessageWinNew;
 	}
