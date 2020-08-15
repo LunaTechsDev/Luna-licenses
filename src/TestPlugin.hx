@@ -9,14 +9,14 @@ using core.StringExtensions;
 using Std;
 
 class TestPlugin {
-	public static var textSpeed:Int = 2;
+ public static var textSpeed: Int = 2;
 
-	public static function main() {
-		trace(Sprite_Base);
-		Comment.pluginParams("
-   @author Kino
+ public static function main() {
+  trace(Sprite_Base);
+  Comment.pluginParams("
+   @author Test
    @plugindesc An extension to the core Message Window functionality
-   to support Visual Novels <KITA_MessageExt>.
+   to support Visual Novels <TestPlugin>.
 
    @param Text Speed 
    @desc The speed at which characters will be rendered
@@ -38,60 +38,61 @@ class TestPlugin {
    Hope this plugin helps and enjoy!
    ");
 
-		var parameters:Any = PluginManager.parameters("KITA_MessageExt");
-		textSpeed = Fn.getByArrSyntax(parameters, "Text Speed");
-		trace(textSpeed);
+  var parameters: Any = PluginManager.parameters("TestPlugin");
+  textSpeed = Fn.getByArrSyntax(parameters, "Text Speed");
+  trace(textSpeed);
 
-		var newWinMsg = Fn.renameClass(Window_Message, MessageWinNew);
-	}
+  var newWinMsg = Fn.renameClass(Window_Message, MessageWinNew);
+ }
 }
 
 class MessageWinNew extends Window_Message {
-	public var activeTextSpeed:Int;
-	public var originalTextSpeed:Int;
+ public var activeTextSpeed: Int;
+ public var originalTextSpeed: Int;
 
-	public function new(x, y, width, height) {
-		super(x, y, width, height);
-		this.originalTextSpeed = TestPlugin.textSpeed;
-		this.activeTextSpeed = TestPlugin.textSpeed;
-	}
+ public function new(x, y, width, height) {
+  super(x, y, width, height);
+  this.originalTextSpeed = TestPlugin.textSpeed;
+  this.activeTextSpeed = TestPlugin.textSpeed;
+ }
 
-	public function updateTextSpeed(value) {
-		this.activeTextSpeed = value;
-	}
+ public function updateTextSpeed(value) {
+  this.activeTextSpeed = value;
+ }
 
-	public override function processEscapeCharacter(code:String, textState:String) {
-		switch (code) {
-			case '$':
-				this._goldWindow.open();
-			case '.':
-				this.startWait(15);
-			case '!':
-				this.startPause();
+ public override function processEscapeCharacter(code: String,
+   textState: String) {
+  switch (code) {
+   case '$':
+    this._goldWindow.open();
+   case '.':
+    this.startWait(15);
+   case '!':
+    this.startPause();
 
-			case '>':
-				this._lineShowFast = true;
+   case '>':
+    this._lineShowFast = true;
 
-			case '<':
-				this._lineShowFast = false;
+   case '<':
+    this._lineShowFast = false;
 
-			case '^':
-				this._pauseSkip = true;
+   case '^':
+    this._pauseSkip = true;
 
-			case 'TS':
-				this.updateTextSpeed(this.obtainEscapeParam(textState).int());
-			case _:
-				super.processEscapeCharacter(code, textState);
-		}
-	}
+   case 'TS':
+    this.updateTextSpeed(this.obtainEscapeParam(textState).int());
+   case _:
+    super.processEscapeCharacter(code, textState);
+  }
+ }
 
-	public override function processNormalCharacter(textState:String) {
-		super.processNormalCharacter(textState);
-		this.startWait(this.activeTextSpeed);
-	}
+ public override function processNormalCharacter(textState: String) {
+  super.processNormalCharacter(textState);
+  this.startWait(this.activeTextSpeed);
+ }
 
-	public override function terminateMessage() {
-		this.activeTextSpeed = this.originalTextSpeed;
-		super.terminateMessage();
-	}
+ public override function terminateMessage() {
+  this.activeTextSpeed = this.originalTextSpeed;
+  super.terminateMessage();
+ }
 }
