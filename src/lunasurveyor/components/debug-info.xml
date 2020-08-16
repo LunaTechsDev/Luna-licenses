@@ -1,0 +1,18 @@
+<vbox style="background-color:white;">
+  <property-grid id="infoGrid" width="250" autoHeight="true">
+    <property-group id="mapGroup" text="Map Information">
+      <property id="mapWidth" label="Width" type="int" value="0" />
+      <property id="mapHeight" label="Height" type="int" value="0" />
+    </property-group>
+    <property-group id="eventGroup" text="Event Information">
+      <property id="eventCharacterName" label="Character Name" value="" />
+      <property id="eventId" label="Event Id" type="int" value="0"/> 
+      <property id="eventXCoordinate" label="X" type="int" value="0" />
+      <property id="eventYCoordinate" label="Y" type="int" value="0" />
+      <property id="eventSpeed" label="Event Speed" value="" /> 
+      <property id="eventFrequency" label="Event Frequency" value="" />
+      <property id="eventPriority" label="Event Priority" value="" />
+      
+    </property-group>
+  </property-grid>
+</vbox>

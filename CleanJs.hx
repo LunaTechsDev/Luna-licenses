@@ -44,8 +44,10 @@ class CleanJs {
    final filePath = '$distDir/$file';
    final contents = File.read(filePath).readAll().toString();
    final cleanContents = contents.split("\n").map((lineContent) -> {
-    if (lineContent.contains("+=") || lineContent.contains("if(")
-     || lineContent.contains("#haxeui") || lineContent.contains("haxe_ui")
+    if (lineContent.contains("+=")
+     || (lineContent.contains("if(") && !lineContent.contains("_$LTGlobals_$"))
+     || lineContent.contains("#haxeui")
+     || lineContent.contains("haxe_ui")
      || lineContent.contains("return")) {
      return lineContent;
     } else {
@@ -56,7 +58,8 @@ class CleanJs {
       ~/(?<!")\\n(?!")/g.replace(_, "\n"),
       ~/(?<=")\\n(?!")/g.replace(_,
        "\n"), // Below Special Removal Of Characters by appending them with @ symbols
-      ~/@"|"@/gi.replace(_, ""), ~/@(.*)@/gi.replace(_, "$1"));
+      ~/@"|"@/gi.replace(_, ""), ~/@(.*)@/gi.replace(_, "$1"),
+      (~/_\$LTGlobals_\$\.(?!_)/gi).replace(_, ""));
     }
    }).join("\n");
 
