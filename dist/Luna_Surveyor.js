@@ -2,7 +2,7 @@
 // Luna_Surveyor.js
 //=============================================================================
 //=============================================================================
-// Build Date: 2020-08-16 17:58:56
+// Build Date: 2020-08-16 19:46:32
 //=============================================================================
 //=============================================================================
 // Made with LunaTea -- Haxe
@@ -31033,14 +31033,92 @@ class lunasurveyor_components_MainView extends haxe_ui_containers_VBox {
 	hideDebugTools(event) {
 		this.debugInfoContainer.hide();
 	}
+	setMapWidth(value) {
+		this.debugInfo.mapWidth.set_value(value);
+	}
+	setMapHeight(value) {
+		this.debugInfo.mapHeight.set_value(value);
+	}
 	setEventName(value) {
-		this.debugInfo.eventName.set_value(value);
+		this.debugInfo.eventCharacterName.set_value(value);
+	}
+	setEventId(value) {
+		this.debugInfo.eventId.set_value(value);
 	}
 	setEventXCoordinate(value) {
 		this.debugInfo.eventYCoordinate.set_value(value);
 	}
 	setEventYCoordinate(value) {
 		this.debugInfo.eventXCoordinate.set_value(value);
+	}
+	setEventSpeed(value) {
+		let tmp = this.debugInfo.eventSpeed;
+		let tmp1;
+		switch(value) {
+		case 1:
+			tmp1 = "X8Slower";
+			break;
+		case 2:
+			tmp1 = "X4Slower";
+			break;
+		case 3:
+			tmp1 = "X2Slower";
+			break;
+		case 4:
+			tmp1 = "Normal";
+			break;
+		case 5:
+			tmp1 = "X2Faster";
+			break;
+		case 6:
+			tmp1 = "X4Faster";
+			break;
+		default:
+			tmp1 = "";
+		}
+		tmp.set_value("" + tmp1 + ":" + js_Boot.__cast(value , Int));
+	}
+	setEventFrequency(value) {
+		let tmp = this.debugInfo.eventFrequency;
+		let tmp1;
+		switch(value) {
+		case 1:
+			tmp1 = "Lowest";
+			break;
+		case 2:
+			tmp1 = "Lower";
+			break;
+		case 3:
+			tmp1 = "Normal";
+			break;
+		case 4:
+			tmp1 = "Higher";
+			break;
+		case 5:
+			tmp1 = "Highest";
+			break;
+		default:
+			tmp1 = "";
+		}
+		tmp.set_value("" + tmp1 + ":" + js_Boot.__cast(value , Int));
+	}
+	setEventPriority(value) {
+		let tmp = this.debugInfo.eventPriority;
+		let tmp1;
+		switch(value) {
+		case 0:
+			tmp1 = "Below characters";
+			break;
+		case 1:
+			tmp1 = "Same as characters";
+			break;
+		case 2:
+			tmp1 = "Above characters";
+			break;
+		default:
+			tmp1 = "";
+		}
+		tmp.set_value("" + tmp1 + ":" + js_Boot.__cast(value , Int));
 	}
 	registerBehaviours() {
 		super.registerBehaviours();
@@ -31077,20 +31155,35 @@ class lunasurveyor_LunaDebug {
 		window.document.head.appendChild(element);
 		let gameCanvas = window.document.getElementById("ErrorPrinter");
 		window.document.body.insertBefore(lunasurveyor_LunaDebug.mainView.element,gameCanvas);
-		haxe_Log.trace("Added Debug to the current scene.",{ fileName : "src/lunasurveyor/LunaDebug.hx", lineNumber : 25, className : "lunasurveyor.LunaDebug", methodName : "initializeDebug"});
+		haxe_Log.trace("Added Debug to the current scene.",{ fileName : "src/lunasurveyor/LunaDebug.hx", lineNumber : 27, className : "lunasurveyor.LunaDebug", methodName : "initializeDebug"});
 		lunasurveyor_LunaDebug.setupMouseEvents();
 	}
 	static setupMouseEvents() {
+		haxe_Log.trace("Setup Mouse Event",{ fileName : "src/lunasurveyor/LunaDebug.hx", lineNumber : 33, className : "lunasurveyor.LunaDebug", methodName : "setupMouseEvents"});
 		window.document.addEventListener("mousedown",function(event) {
-			let mapX = $gameMap.canvasToMapX(event.clientX);
-			let mapY = $gameMap.canvasToMapY(event.clientY);
-			lunasurveyor_LunaDebug.setEventInformation($gameMap.eventsXy(mapX,mapY).shift());
+			if($gameMap.mapId() > 0) {
+				let mapX = $gameMap.canvasToMapX(event.clientX);
+				let mapY = $gameMap.canvasToMapY(event.clientY);
+				haxe_Log.trace(mapX,{ fileName : "src/lunasurveyor/LunaDebug.hx", lineNumber : 39, className : "lunasurveyor.LunaDebug", methodName : "setupMouseEvents", customParams : [mapY,"Clicked Information"]});
+				let gameEvent = $gameMap.eventsXy(mapX,mapY).shift();
+				if(gameEvent != null) {
+					lunasurveyor_LunaDebug.setEventInformation(gameEvent);
+				}
+			}
 		},{ passive : false});
+	}
+	static setMapInfo(map) {
+		lunasurveyor_LunaDebug.mainView.setMapWidth(map.width());
+		lunasurveyor_LunaDebug.mainView.setMapHeight(map.height());
 	}
 	static setEventInformation(event) {
 		lunasurveyor_LunaDebug.mainView.setEventName(event.characterName());
+		lunasurveyor_LunaDebug.mainView.setEventId(event.eventId());
 		lunasurveyor_LunaDebug.mainView.setEventXCoordinate(event.x);
 		lunasurveyor_LunaDebug.mainView.setEventYCoordinate(event.y);
+		lunasurveyor_LunaDebug.mainView.setEventSpeed(event.moveSpeed());
+		lunasurveyor_LunaDebug.mainView.setEventFrequency(event.moveFrequency());
+		lunasurveyor_LunaDebug.mainView.setEventPriority(event._priorityType);
 	}
 }
 $hxClasses["lunasurveyor.LunaDebug"] = lunasurveyor_LunaDebug;
@@ -31111,12 +31204,16 @@ class lunasurveyor_Luna_$Surveyor {
 		lunasurveyor_Luna_$Surveyor.surveyorEmitter.on("setupDebug",function() {
 			lunasurveyor_LunaDebug.initializeDebug();
 		});
+		lunasurveyor_Luna_$Surveyor.surveyorEmitter.on("onmap",function() {
+			lunasurveyor_LunaDebug.setMapInfo($gameMap);
+		});
 		
 //=============================================================================
 // Base Class Overrides
 //=============================================================================
       ;
 		Scene_Base = lunasurveyor_SurveyorSceneBaseExt;
+		Scene_Map = lunasurveyor_SurveyorSceneMapExt;
 	}
 	static setupDebugTool() {
 		haxe_Timer.delay(function() {
@@ -31140,6 +31237,21 @@ lunasurveyor_SurveyorSceneBaseExt.__name__ = "lunasurveyor.SurveyorSceneBaseExt"
 lunasurveyor_SurveyorSceneBaseExt.__super__ = Scene_Base;
 Object.assign(lunasurveyor_SurveyorSceneBaseExt.prototype, {
 	__class__: lunasurveyor_SurveyorSceneBaseExt
+});
+class lunasurveyor_SurveyorSceneMapExt extends Scene_Map {
+	constructor() {
+		super();
+	}
+	onMapLoaded() {
+		super.onMapLoaded();
+		lunasurveyor_Luna_$Surveyor.surveyorEmitter.emit("onmap");
+	}
+}
+$hxClasses["lunasurveyor.SurveyorSceneMapExt"] = lunasurveyor_SurveyorSceneMapExt;
+lunasurveyor_SurveyorSceneMapExt.__name__ = "lunasurveyor.SurveyorSceneMapExt";
+lunasurveyor_SurveyorSceneMapExt.__super__ = Scene_Map;
+Object.assign(lunasurveyor_SurveyorSceneMapExt.prototype, {
+	__class__: lunasurveyor_SurveyorSceneMapExt
 });
 class lunasurveyor_components_Menu extends haxe_ui_containers_VBox {
 	constructor() {
@@ -31211,7 +31323,7 @@ class lunasurveyor_components_DebugInfo extends haxe_ui_containers_VBox {
 		super();
 		let c0 = new haxe_ui_containers_properties_PropertyGrid();
 		c0.set_id("infoGrid");
-		c0.set_width(200.);
+		c0.set_width(250.);
 		c0.autoHeight = true;
 		let c1 = new haxe_ui_containers_properties_PropertyGroup();
 		c1.set_id("mapGroup");
@@ -31233,22 +31345,43 @@ class lunasurveyor_components_DebugInfo extends haxe_ui_containers_VBox {
 		c4.set_id("eventGroup");
 		c4.set_text("Event Information");
 		let c5 = new haxe_ui_containers_properties_Property();
-		c5.set_id("eventName");
+		c5.set_id("eventCharacterName");
 		c5.set_value(null);
-		c5.set_label("Name");
+		c5.set_label("Character Name");
 		c4.addComponent(c5);
 		let c6 = new haxe_ui_containers_properties_Property();
-		c6.set_id("eventXCoordinate");
+		c6.set_id("eventId");
 		c6.set_value(0);
 		c6.set_type("int");
-		c6.set_label("X");
+		c6.set_label("Event Id");
 		c4.addComponent(c6);
 		let c7 = new haxe_ui_containers_properties_Property();
-		c7.set_id("eventYCoordinate");
+		c7.set_id("eventXCoordinate");
 		c7.set_value(0);
 		c7.set_type("int");
-		c7.set_label("Y");
+		c7.set_label("X");
 		c4.addComponent(c7);
+		let c8 = new haxe_ui_containers_properties_Property();
+		c8.set_id("eventYCoordinate");
+		c8.set_value(0);
+		c8.set_type("int");
+		c8.set_label("Y");
+		c4.addComponent(c8);
+		let c9 = new haxe_ui_containers_properties_Property();
+		c9.set_id("eventSpeed");
+		c9.set_value(null);
+		c9.set_label("Event Speed");
+		c4.addComponent(c9);
+		let c10 = new haxe_ui_containers_properties_Property();
+		c10.set_id("eventFrequency");
+		c10.set_value(null);
+		c10.set_label("Event Frequency");
+		c4.addComponent(c10);
+		let c11 = new haxe_ui_containers_properties_Property();
+		c11.set_id("eventPriority");
+		c11.set_value(null);
+		c11.set_label("Event Priority");
+		c4.addComponent(c11);
 		c0.addComponent(c4);
 		this.addComponent(c0);
 		this.set_styleString("background-color:white;");
@@ -31257,10 +31390,14 @@ class lunasurveyor_components_DebugInfo extends haxe_ui_containers_VBox {
 		this.mapHeight = c3;
 		this.mapGroup = c1;
 		this.infoGrid = c0;
-		this.eventYCoordinate = c7;
-		this.eventXCoordinate = c6;
-		this.eventName = c5;
+		this.eventYCoordinate = c8;
+		this.eventXCoordinate = c7;
+		this.eventSpeed = c9;
+		this.eventPriority = c11;
+		this.eventId = c6;
 		this.eventGroup = c4;
+		this.eventFrequency = c10;
+		this.eventCharacterName = c5;
 	}
 	registerBehaviours() {
 		super.registerBehaviours();
@@ -31289,13 +31426,17 @@ Object.assign(lunasurveyor_components_DebugInfo.prototype, {
 	,infoGrid: null
 	,eventYCoordinate: null
 	,eventXCoordinate: null
-	,eventName: null
+	,eventSpeed: null
+	,eventPriority: null
+	,eventId: null
 	,eventGroup: null
+	,eventFrequency: null
+	,eventCharacterName: null
 });
 class _$LTGlobals_$ {
 }
 $hxClasses["_LTGlobals_"] = _$LTGlobals_$;
-__name__ = "_LTGlobals_";
+_$LTGlobals_$.__name__ = "_LTGlobals_";
 class utils_Fn {
 	static proto(obj) {
 		return obj.prototype;

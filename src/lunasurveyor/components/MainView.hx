@@ -1,5 +1,8 @@
 package lunasurveyor.components;
 
+import mz.types.LunaTea.CharacterPriority;
+import mz.types.LunaTea.MoveSpeed;
+import mz.types.LunaTea.MoveFrequency;
 import haxe.ui.containers.VBox;
 import haxe.ui.events.MouseEvent;
 import haxe.ui.events.UIEvent;
@@ -39,8 +42,20 @@ import haxe.ui.events.UIEvent;
  // Tracking changes for debug information
  // @:bind(this.debugInfo.infoGrid, UIEvent.CHANGE)
 
+ public function setMapWidth(value: Int) {
+  this.debugInfo.mapWidth.value = value;
+ }
+
+ public function setMapHeight(value: Int) {
+  this.debugInfo.mapHeight.value = value;
+ }
+
  public function setEventName(value: String) {
-  this.debugInfo.eventName.value = value;
+  this.debugInfo.eventCharacterName.value = value;
+ }
+
+ public function setEventId(value: Int) {
+  this.debugInfo.eventId.value = value;
  }
 
  public function setEventXCoordinate(value: Int) {
@@ -49,6 +64,18 @@ import haxe.ui.events.UIEvent;
 
  public function setEventYCoordinate(value: Int) {
   this.debugInfo.eventXCoordinate.value = value;
+ }
+
+ public function setEventSpeed(value: MoveSpeed) {
+  this.debugInfo.eventSpeed.value = '${value.toString()}:${cast (value, Int)}';
+ }
+
+ public function setEventFrequency(value: MoveFrequency) {
+  this.debugInfo.eventFrequency.value = '${value.toString()}:${cast (value, Int)}';
+ }
+
+ public function setEventPriority(value: CharacterPriority) {
+  this.debugInfo.eventPriority.value = '${value.toString()}:${cast (value, Int)}';
  }
 }
 

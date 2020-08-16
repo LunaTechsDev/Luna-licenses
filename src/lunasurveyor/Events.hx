@@ -6,4 +6,5 @@ enum abstract SCustomEvents(String) from String to String {
  public var SELECT_EVENT = "selectEvent";
  public var SHOW_DEBUG = "showDebug";
  public var HIDE_DEBUG = "hideDebug";
+ public var ON_MAP = "onmap";
 }
