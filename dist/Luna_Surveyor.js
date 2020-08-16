@@ -2,7 +2,7 @@
 // Luna_Surveyor.js
 //=============================================================================
 //=============================================================================
-// Build Date: 2020-08-16 16:51:31
+// Build Date: 2020-08-16 17:58:56
 //=============================================================================
 //=============================================================================
 // Made with LunaTea -- Haxe
@@ -1000,6 +1000,21 @@ class haxe_Resource {
 		while(_g1 < _g2.length) _g.push(_g2[_g1++].name);
 		return _g;
 	}
+	static getString(name) {
+		let _g = 0;
+		let _g1 = haxe_Resource.content;
+		while(_g < _g1.length) {
+			let x = _g1[_g];
+			++_g;
+			if(x.name == name) {
+				if(x.str != null) {
+					return x.str;
+				}
+				return haxe_crypto_Base64.decode(x.data).toString();
+			}
+		}
+		return null;
+	}
 	static getBytes(name) {
 		let _g = 0;
 		let _g1 = haxe_Resource.content;
@@ -1072,6 +1087,50 @@ class haxe_io_Bytes {
 		this.b.bufferValue = data;
 		data.hxBytes = this;
 		data.bytes = this.b;
+	}
+	getString(pos,len,encoding) {
+		if(pos < 0 || len < 0 || pos + len > this.length) {
+			throw haxe_Exception.thrown(haxe_io_Error.OutsideBounds);
+		}
+		if(encoding == null) {
+			encoding = haxe_io_Encoding.UTF8;
+		}
+		let s = "";
+		let b = this.b;
+		let i = pos;
+		let max = pos + len;
+		switch(encoding._hx_index) {
+		case 0:
+			while(i < max) {
+				let c = b[i++];
+				if(c < 128) {
+					if(c == 0) {
+						break;
+					}
+					s += String.fromCodePoint(c);
+				} else if(c < 224) {
+					let code = (c & 63) << 6 | b[i++] & 127;
+					s += String.fromCodePoint(code);
+				} else if(c < 240) {
+					let code = (c & 31) << 12 | (b[i++] & 127) << 6 | b[i++] & 127;
+					s += String.fromCodePoint(code);
+				} else {
+					let u = (c & 15) << 18 | (b[i++] & 127) << 12 | (b[i++] & 127) << 6 | b[i++] & 127;
+					s += String.fromCodePoint(u);
+				}
+			}
+			break;
+		case 1:
+			while(i < max) {
+				let c = b[i++] | b[i++] << 8;
+				s += String.fromCodePoint(c);
+			}
+			break;
+		}
+		return s;
+	}
+	toString() {
+		return this.getString(0,this.length);
 	}
 	static ofString(s,encoding) {
 		if(encoding == haxe_io_Encoding.RawNative) {
@@ -1202,6 +1261,139 @@ Object.assign(haxe_crypto_BaseCode.prototype, {
 	,nbits: null
 	,tbl: null
 });
+class haxe_ds_ArraySort {
+	static sort(a,cmp) {
+		haxe_ds_ArraySort.rec(a,cmp,0,a.length);
+	}
+	static rec(a,cmp,from,to) {
+		let middle = from + to >> 1;
+		if(to - from < 12) {
+			if(to <= from) {
+				return;
+			}
+			let _g = from + 1;
+			while(_g < to) {
+				let j = _g++;
+				while(j > from) {
+					if(cmp(a[j],a[j - 1]) < 0) {
+						haxe_ds_ArraySort.swap(a,j - 1,j);
+					} else {
+						break;
+					}
+					--j;
+				}
+			}
+			return;
+		}
+		haxe_ds_ArraySort.rec(a,cmp,from,middle);
+		haxe_ds_ArraySort.rec(a,cmp,middle,to);
+		haxe_ds_ArraySort.doMerge(a,cmp,from,middle,to,middle - from,to - middle);
+	}
+	static doMerge(a,cmp,from,pivot,to,len1,len2) {
+		while(true) {
+			let first_cut;
+			let second_cut;
+			let len11;
+			let len22;
+			if(len1 == 0 || len2 == 0) {
+				return;
+			}
+			if(len1 + len2 == 2) {
+				if(cmp(a[pivot],a[from]) < 0) {
+					haxe_ds_ArraySort.swap(a,pivot,from);
+				}
+				return;
+			}
+			if(len1 > len2) {
+				len11 = len1 >> 1;
+				first_cut = from + len11;
+				second_cut = haxe_ds_ArraySort.lower(a,cmp,pivot,to,first_cut);
+				len22 = second_cut - pivot;
+			} else {
+				len22 = len2 >> 1;
+				second_cut = pivot + len22;
+				first_cut = haxe_ds_ArraySort.upper(a,cmp,from,pivot,second_cut);
+				len11 = first_cut - from;
+			}
+			haxe_ds_ArraySort.rotate(a,cmp,first_cut,pivot,second_cut);
+			let new_mid = first_cut + len22;
+			haxe_ds_ArraySort.doMerge(a,cmp,from,first_cut,new_mid,len11,len22);
+			from = new_mid;
+			pivot = second_cut;
+			len1 -= len11;
+			len2 -= len22;
+		}
+	}
+	static rotate(a,cmp,from,mid,to) {
+		if(from == mid || mid == to) {
+			return;
+		}
+		let n = haxe_ds_ArraySort.gcd(to - from,mid - from);
+		while(n-- != 0) {
+			let val = a[from + n];
+			let shift = mid - from;
+			let p1 = from + n;
+			let p2 = from + n + shift;
+			while(p2 != from + n) {
+				a[p1] = a[p2];
+				p1 = p2;
+				if(to - p2 > shift) {
+					p2 += shift;
+				} else {
+					p2 = from + (shift - (to - p2));
+				}
+			}
+			a[p1] = val;
+		}
+	}
+	static gcd(m,n) {
+		while(n != 0) {
+			let t = m % n;
+			m = n;
+			n = t;
+		}
+		return m;
+	}
+	static upper(a,cmp,from,to,val) {
+		let len = to - from;
+		let half;
+		let mid;
+		while(len > 0) {
+			half = len >> 1;
+			mid = from + half;
+			if(cmp(a[val],a[mid]) < 0) {
+				len = half;
+			} else {
+				from = mid + 1;
+				len = len - half - 1;
+			}
+		}
+		return from;
+	}
+	static lower(a,cmp,from,to,val) {
+		let len = to - from;
+		let half;
+		let mid;
+		while(len > 0) {
+			half = len >> 1;
+			mid = from + half;
+			if(cmp(a[mid],a[val]) < 0) {
+				from = mid + 1;
+				len = len - half - 1;
+			} else {
+				len = half;
+			}
+		}
+		return from;
+	}
+	static swap(a,i,j) {
+		let tmp = a[i];
+		a[i] = a[j];
+		a[j] = tmp;
+	}
+}
+$hxClasses["haxe.ds.ArraySort"] = haxe_ds_ArraySort;
+haxe_ds_ArraySort.__name__ = "haxe.ds.ArraySort";
 class haxe_ds_BalancedTree {
 	constructor() {
 	}
@@ -1430,6 +1622,14 @@ class haxe_ds_ObjectMap {
 		}
 		return new haxe_iterators_ArrayIterator(a);
 	}
+	iterator() {
+		return { ref : this.h, it : this.keys(), hasNext : function() {
+			return this.it.hasNext();
+		}, next : function() {
+			let i = this.it.next();
+			return this.ref[i.__id__];
+		}};
+	}
 }
 $hxClasses["haxe.ds.ObjectMap"] = haxe_ds_ObjectMap;
 haxe_ds_ObjectMap.__name__ = "haxe.ds.ObjectMap";
@@ -1478,6 +1678,12 @@ Object.assign(haxe_ds_StringMap.prototype, {
 	__class__: haxe_ds_StringMap
 	,h: null
 });
+var haxe_io_Error = $hxEnums["haxe.io.Error"] = { __ename__ : true, __constructs__ : ["Blocked","Overflow","OutsideBounds","Custom"]
+	,Blocked: {_hx_index:0,__enum__:"haxe.io.Error",toString:$estr}
+	,Overflow: {_hx_index:1,__enum__:"haxe.io.Error",toString:$estr}
+	,OutsideBounds: {_hx_index:2,__enum__:"haxe.io.Error",toString:$estr}
+	,Custom: ($_=function(e) { return {_hx_index:3,e:e,__enum__:"haxe.io.Error",toString:$estr}; },$_.__params__ = ["e"],$_)
+};
 class haxe_iterators_ArrayIterator {
 	constructor(array) {
 		this.current = 0;
@@ -3323,6 +3529,7 @@ class haxe_ui_core_Component extends haxe_ui_backend_ComponentImpl {
 		this.customStyle = new haxe_ui_styles_Style(null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null);
 		this._hidden = false;
 		this.bindingRoot = false;
+		this.userData = null;
 		this._animatable = true;
 		this._native = null;
 		this._defaultLayoutClass = null;
@@ -3992,6 +4199,34 @@ class haxe_ui_core_Component extends haxe_ui_backend_ComponentImpl {
 			let _g = 0;
 			let _g1 = this._children == null ? [] : this._children;
 			while(_g < _g1.length) _g1[_g++].addClass(name,invalidate,recursive);
+		}
+	}
+	addClasses(names,invalidate,recursive) {
+		if(recursive == null) {
+			recursive = false;
+		}
+		if(invalidate == null) {
+			invalidate = true;
+		}
+		let needsInvalidate = false;
+		let _g = 0;
+		while(_g < names.length) {
+			let name = names[_g];
+			++_g;
+			if(this.classes.indexOf(name) == -1) {
+				this.classes.push(name);
+				if(invalidate == true) {
+					needsInvalidate = true;
+				}
+			}
+		}
+		if(needsInvalidate == true) {
+			this.invalidateComponent("style");
+		}
+		if(recursive == true) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) _g1[_g++].addClasses(names,invalidate,recursive);
 		}
 	}
 	removeClass(name,invalidate,recursive) {
@@ -4730,6 +4965,7 @@ Object.assign(haxe_ui_core_Component.prototype, {
 	,_native: null
 	,_animatable: null
 	,_componentAnimation: null
+	,userData: null
 	,screen: null
 	,bindingRoot: null
 	,_hidden: null
@@ -4755,10 +4991,38 @@ Object.assign(haxe_ui_core_Component.prototype, {
 	,onClick: null
 	,__properties__: Object.assign({}, haxe_ui_backend_ComponentImpl.prototype.__properties__, {set_onClick: "set_onClick",set_onAnimationEnd: "set_onAnimationEnd",set_onAnimationStart: "set_onAnimationStart",set_verticalAlign: "set_verticalAlign",set_horizontalAlign: "set_horizontalAlign",set_opacity: "set_opacity",get_paddingTop: "get_paddingTop",get_paddingLeft: "get_paddingLeft",get_cssName: "get_cssName",get_namedComponents: "get_namedComponents",set_layout: "set_layout",get_layout: "get_layout",set_includeInLayout: "set_includeInLayout",get_includeInLayout: "get_includeInLayout",get_styleSheet: "get_styleSheet",set_styleString: "set_styleString",get_styleString: "get_styleString",set_styleNames: "set_styleNames",get_styleNames: "get_styleNames",set_customStyle: "set_customStyle",set_hidden: "set_hidden",get_hidden: "get_hidden",get_numComponents: "get_numComponents",get_rootComponent: "get_rootComponent",get_screen: "get_screen",set_componentAnimation: "set_componentAnimation",get_componentAnimation: "get_componentAnimation",set_native: "set_native",get_native: "get_native"})
 });
+class haxe_ui_util_Properties {
+	constructor() {
+		this._props = new haxe_ds_StringMap();
+	}
+	getProp(name,defaultValue) {
+		let v = defaultValue;
+		if(Object.prototype.hasOwnProperty.call(this._props.h,name)) {
+			v = this._props.h[name];
+		}
+		return v;
+	}
+}
+$hxClasses["haxe.ui.util.Properties"] = haxe_ui_util_Properties;
+haxe_ui_util_Properties.__name__ = "haxe.ui.util.Properties";
+Object.assign(haxe_ui_util_Properties.prototype, {
+	__class__: haxe_ui_util_Properties
+	,_props: null
+});
 class haxe_ui_util_GenericConfig {
 	constructor() {
 		this.values = new haxe_ds_StringMap();
 		this.sections = new haxe_ds_StringMap();
+	}
+	addSection(name) {
+		let config = new haxe_ui_util_GenericConfig();
+		let array = this.sections.h[name];
+		if(array == null) {
+			array = [];
+			this.sections.h[name] = array;
+		}
+		array.push(config);
+		return config;
 	}
 	findBy(section,field,value) {
 		let array = this.sections.h[section];
@@ -4904,12 +5168,50 @@ class haxe_ui_styles_CompositeStyleSheet {
 		}
 		return this._animations;
 	}
+	parse(css,styleSheetName,invalidateAll) {
+		if(invalidateAll == null) {
+			invalidateAll = false;
+		}
+		if(styleSheetName == null) {
+			styleSheetName = "default";
+		}
+		let s = this.findStyleSheet(styleSheetName);
+		if(s == null) {
+			s = new haxe_ui_styles_StyleSheet();
+			s.name = styleSheetName;
+			this._styleSheets.push(s);
+		}
+		s.parse(css);
+		this._animations = null;
+		if(invalidateAll == true) {
+			haxe_ui_core_Screen.get_instance().invalidateAll();
+		}
+	}
+	findStyleSheet(styleSheetName) {
+		let _g = 0;
+		let _g1 = this._styleSheets;
+		while(_g < _g1.length) {
+			let s = _g1[_g];
+			++_g;
+			if(s.name == styleSheetName) {
+				return s;
+			}
+		}
+		return null;
+	}
 	buildStyleFor(c) {
 		let style = new haxe_ui_styles_Style(null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null);
 		let _g = 0;
 		let _g1 = this._styleSheets;
 		while(_g < _g1.length) style = _g1[_g++].buildStyleFor(c,style);
 		return style;
+	}
+	clear(styleSheetName) {
+		let s = this.findStyleSheet(styleSheetName);
+		if(s != null) {
+			s.clear();
+			this._animations = null;
+		}
 	}
 }
 $hxClasses["haxe.ui.styles.CompositeStyleSheet"] = haxe_ui_styles_CompositeStyleSheet;
@@ -4921,6 +5223,500 @@ Object.assign(haxe_ui_styles_CompositeStyleSheet.prototype, {
 	,__properties__: {get_animations: "get_animations"}
 });
 class haxe_ui_Toolkit {
+	static get_backendProperties() {
+		haxe_ui_Toolkit.buildBackend();
+		return haxe_ui_Toolkit._backendProperties;
+	}
+	static build() {
+		if(haxe_ui_Toolkit._built == true) {
+			return;
+		}
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Component","haxe.ui.core.Component");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("HGrid","haxe.ui.components.HGrid");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Toggle","haxe.ui.components.Toggle");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Stepper","haxe.ui.components.Stepper");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("TextArea","haxe.ui.components.TextArea");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("HorizontalProgress","haxe.ui.components.HorizontalProgress");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("TabBar","haxe.ui.components.TabBar");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("VGrid","haxe.ui.components.VGrid");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Switch","haxe.ui.components.Switch");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("HorizontalScroll","haxe.ui.components.HorizontalScroll");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Spacer","haxe.ui.components.Spacer");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("OptionBox","haxe.ui.components.OptionBox");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("NumberStepper","haxe.ui.components.NumberStepper");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Range","haxe.ui.components.Range");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Scroll","haxe.ui.components.Scroll");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("VerticalScroll","haxe.ui.components.VerticalScroll");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("VerticalProgress","haxe.ui.components.VerticalProgress");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Label","haxe.ui.components.Label");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("HorizontalRange","haxe.ui.components.HorizontalRange");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("VerticalSlider","haxe.ui.components.VerticalSlider");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Slider","haxe.ui.components.Slider");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("CalendarEvent","haxe.ui.components.CalendarEvent");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Calendar","haxe.ui.components.Calendar");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Button","haxe.ui.components.Button");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("HorizontalSlider","haxe.ui.components.HorizontalSlider");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Image","haxe.ui.components.Image");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Column","haxe.ui.components.Column");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("CheckBox","haxe.ui.components.CheckBox");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("VerticalRange","haxe.ui.components.VerticalRange");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("TextField","haxe.ui.components.TextField");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Progress","haxe.ui.components.Progress");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("DropDown","haxe.ui.components.DropDown");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("IDropDownHandler","haxe.ui.components.IDropDownHandler");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("DropDownHandler","haxe.ui.components.DropDownHandler");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("ListDropDownHandler","haxe.ui.components.ListDropDownHandler");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("CalendarDropDownHandler","haxe.ui.components.CalendarDropDownHandler");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("CalendarView","haxe.ui.containers.CalendarView");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("HBox","haxe.ui.containers.HBox");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Header","haxe.ui.containers.Header");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Grid","haxe.ui.containers.Grid");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Box","haxe.ui.containers.Box");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("TableView","haxe.ui.containers.TableView");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("ListView","haxe.ui.containers.ListView");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Absolute","haxe.ui.containers.Absolute");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("VBox","haxe.ui.containers.VBox");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Splitter","haxe.ui.containers.Splitter");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Accordion","haxe.ui.containers.Accordion");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Stack","haxe.ui.containers.Stack");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Frame","haxe.ui.containers.Frame");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("TabView","haxe.ui.containers.TabView");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Group","haxe.ui.containers.Group");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("ContinuousHBox","haxe.ui.containers.ContinuousHBox");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("HorizontalSplitter","haxe.ui.containers.HorizontalSplitter");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("ScrollView","haxe.ui.containers.ScrollView");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("IVirtualContainer","haxe.ui.containers.IVirtualContainer");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("VerticalSplitter","haxe.ui.containers.VerticalSplitter");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("MenuBar","haxe.ui.containers.menus.MenuBar");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("MenuCheckBox","haxe.ui.containers.menus.MenuCheckBox");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("MenuSeparator","haxe.ui.containers.menus.MenuSeparator");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("MenuEvent","haxe.ui.containers.menus.MenuEvent");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Menu","haxe.ui.containers.menus.Menu");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("MenuItem","haxe.ui.containers.menus.MenuItem");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("MenuOptionBox","haxe.ui.containers.menus.MenuOptionBox");
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Std","Std");
+		haxe_ui_scripting_ScriptInterp.addStaticClass("Std",Std);
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Math","Math");
+		haxe_ui_scripting_ScriptInterp.addStaticClass("Math",Math);
+		haxe_ui_scripting_ScriptInterp.addClassAlias("StringTools","StringTools");
+		haxe_ui_scripting_ScriptInterp.addStaticClass("StringTools",StringTools);
+		haxe_ui_scripting_ScriptInterp.addClassAlias("Screen","haxe.ui.core.Screen");
+		haxe_ui_scripting_ScriptInterp.addStaticClass("Screen",haxe_ui_core_Screen);
+		haxe_ui_scripting_ScriptInterp.addClassAlias("MessageBox","haxe.ui.containers.dialogs.MessageBox");
+		haxe_ui_scripting_ScriptInterp.addStaticClass("MessageBox",haxe_ui_containers_dialogs_MessageBox);
+		haxe_ui_themes_ThemeManager.get_instance().getTheme("native").parent = "default";
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("native","haxeui-core/styles/native/main.css",-3.);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("global","haxeui-core/styles/global.css",-4.);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/main.css",-3.);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/buttons.css",-2.99);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/dialogs.css",-2.98000000000000043);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/textinputs.css",-2.97000000000000064);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/scrollbars.css",-2.96000000000000085);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/scrollview.css",-2.95000000000000107);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/checkboxes.css",-2.94000000000000128);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/optionboxes.css",-2.93000000000000149);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/ranges.css",-2.92000000000000171);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/progressbars.css",-2.91000000000000192);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/sliders.css",-2.90000000000000213);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/steppers.css",-2.89000000000000234);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/tabs.css",-2.88000000000000256);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/listview.css",-2.87000000000000277);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/dropdowns.css",-2.86000000000000298);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/tableview.css",-2.8500000000000032);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/switches.css",-2.84000000000000341);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/calendars.css",-2.83000000000000362);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/menus.css",-2.82000000000000384);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/accordion.css",-2.81000000000000405);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/propertygrids.css",-2.80000000000000426);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/frames.css",-2.79000000000000448);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","haxeui-core/styles/default/splitters.css",-2.78000000000000469);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("native","styles/native/main.css",-1);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("global","styles/main.css",-2);
+		haxe_ui_themes_ThemeManager.get_instance().addStyleResource("default","styles/default/main.css",-1);
+		haxe_ui_core_ComponentClassMap.register("vsplitter","haxe.ui.containers.VerticalSplitter");
+		haxe_ui_core_ComponentClassMap.register("vslider","haxe.ui.components.VerticalSlider");
+		haxe_ui_core_ComponentClassMap.register("vscroll","haxe.ui.components.VerticalScroll");
+		haxe_ui_core_ComponentClassMap.register("vrange","haxe.ui.components.VerticalRange");
+		haxe_ui_core_ComponentClassMap.register("vprogress","haxe.ui.components.VerticalProgress");
+		haxe_ui_core_ComponentClassMap.register("vgrid","haxe.ui.components.VGrid");
+		haxe_ui_core_ComponentClassMap.register("verticalsplitter","haxe.ui.containers.VerticalSplitter");
+		haxe_ui_core_ComponentClassMap.register("verticalslider","haxe.ui.components.VerticalSlider");
+		haxe_ui_core_ComponentClassMap.register("verticalscroll","haxe.ui.components.VerticalScroll");
+		haxe_ui_core_ComponentClassMap.register("verticalrange","haxe.ui.components.VerticalRange");
+		haxe_ui_core_ComponentClassMap.register("verticalprogress","haxe.ui.components.VerticalProgress");
+		haxe_ui_core_ComponentClassMap.register("vbox","haxe.ui.containers.VBox");
+		haxe_ui_core_ComponentClassMap.register("toggle","haxe.ui.components.Toggle");
+		haxe_ui_core_ComponentClassMap.register("textfield","haxe.ui.components.TextField");
+		haxe_ui_core_ComponentClassMap.register("textarea","haxe.ui.components.TextArea");
+		haxe_ui_core_ComponentClassMap.register("text","haxe.ui.components.Label");
+		haxe_ui_core_ComponentClassMap.register("tabview","haxe.ui.containers.TabView");
+		haxe_ui_core_ComponentClassMap.register("tableview","haxe.ui.containers.TableView");
+		haxe_ui_core_ComponentClassMap.register("tabbar","haxe.ui.components.TabBar");
+		haxe_ui_core_ComponentClassMap.register("switch","haxe.ui.components.Switch");
+		haxe_ui_core_ComponentClassMap.register("stepper","haxe.ui.components.Stepper");
+		haxe_ui_core_ComponentClassMap.register("stack","haxe.ui.containers.Stack");
+		haxe_ui_core_ComponentClassMap.register("splitter","haxe.ui.containers.Splitter");
+		haxe_ui_core_ComponentClassMap.register("spacer","haxe.ui.components.Spacer");
+		haxe_ui_core_ComponentClassMap.register("slider","haxe.ui.components.Slider");
+		haxe_ui_core_ComponentClassMap.register("scrollview","haxe.ui.containers.ScrollView");
+		haxe_ui_core_ComponentClassMap.register("scroll","haxe.ui.components.Scroll");
+		haxe_ui_core_ComponentClassMap.register("range","haxe.ui.components.Range");
+		haxe_ui_core_ComponentClassMap.register("propertygroup","haxe.ui.containers.properties.PropertyGroup");
+		haxe_ui_core_ComponentClassMap.register("propertygrid","haxe.ui.containers.properties.PropertyGrid");
+		haxe_ui_core_ComponentClassMap.register("property","haxe.ui.containers.properties.Property");
+		haxe_ui_core_ComponentClassMap.register("progress","haxe.ui.components.Progress");
+		haxe_ui_core_ComponentClassMap.register("optionbox","haxe.ui.components.OptionBox");
+		haxe_ui_core_ComponentClassMap.register("numberstepper","haxe.ui.components.NumberStepper");
+		haxe_ui_core_ComponentClassMap.register("menuseparator","haxe.ui.containers.menus.MenuSeparator");
+		haxe_ui_core_ComponentClassMap.register("menuoptionbox","haxe.ui.containers.menus.MenuOptionBox");
+		haxe_ui_core_ComponentClassMap.register("menuitem","haxe.ui.containers.menus.MenuItem");
+		haxe_ui_core_ComponentClassMap.register("menucheckbox","haxe.ui.containers.menus.MenuCheckBox");
+		haxe_ui_core_ComponentClassMap.register("menubar","haxe.ui.containers.menus.MenuBar");
+		haxe_ui_core_ComponentClassMap.register("menu","haxe.ui.containers.menus.Menu");
+		haxe_ui_core_ComponentClassMap.register("listview","haxe.ui.containers.ListView");
+		haxe_ui_core_ComponentClassMap.register("label","haxe.ui.components.Label");
+		haxe_ui_core_ComponentClassMap.register("itemrenderer","haxe.ui.core.ItemRenderer");
+		haxe_ui_core_ComponentClassMap.register("image","haxe.ui.components.Image");
+		haxe_ui_core_ComponentClassMap.register("hsplitter","haxe.ui.containers.HorizontalSplitter");
+		haxe_ui_core_ComponentClassMap.register("hslider","haxe.ui.components.HorizontalSlider");
+		haxe_ui_core_ComponentClassMap.register("hscroll","haxe.ui.components.HorizontalScroll");
+		haxe_ui_core_ComponentClassMap.register("hrange","haxe.ui.components.HorizontalRange");
+		haxe_ui_core_ComponentClassMap.register("hprogress","haxe.ui.components.HorizontalProgress");
+		haxe_ui_core_ComponentClassMap.register("horizontalsplitter","haxe.ui.containers.HorizontalSplitter");
+		haxe_ui_core_ComponentClassMap.register("horizontalslider","haxe.ui.components.HorizontalSlider");
+		haxe_ui_core_ComponentClassMap.register("horizontalscroll","haxe.ui.components.HorizontalScroll");
+		haxe_ui_core_ComponentClassMap.register("horizontalrange","haxe.ui.components.HorizontalRange");
+		haxe_ui_core_ComponentClassMap.register("horizontalprogress","haxe.ui.components.HorizontalProgress");
+		haxe_ui_core_ComponentClassMap.register("hgrid","haxe.ui.components.HGrid");
+		haxe_ui_core_ComponentClassMap.register("header","haxe.ui.containers.Header");
+		haxe_ui_core_ComponentClassMap.register("hbox","haxe.ui.containers.HBox");
+		haxe_ui_core_ComponentClassMap.register("group","haxe.ui.containers.Group");
+		haxe_ui_core_ComponentClassMap.register("grid","haxe.ui.containers.Grid");
+		haxe_ui_core_ComponentClassMap.register("frame","haxe.ui.containers.Frame");
+		haxe_ui_core_ComponentClassMap.register("dropdown","haxe.ui.components.DropDown");
+		haxe_ui_core_ComponentClassMap.register("dialog","haxe.ui.containers.dialogs.Dialog");
+		haxe_ui_core_ComponentClassMap.register("continuoushbox","haxe.ui.containers.ContinuousHBox");
+		haxe_ui_core_ComponentClassMap.register("component","haxe.ui.core.Component");
+		haxe_ui_core_ComponentClassMap.register("column","haxe.ui.components.Column");
+		haxe_ui_core_ComponentClassMap.register("checkbox","haxe.ui.components.CheckBox");
+		haxe_ui_core_ComponentClassMap.register("calendarview","haxe.ui.containers.CalendarView");
+		haxe_ui_core_ComponentClassMap.register("calendar","haxe.ui.components.Calendar");
+		haxe_ui_core_ComponentClassMap.register("button","haxe.ui.components.Button");
+		haxe_ui_core_ComponentClassMap.register("box","haxe.ui.containers.Box");
+		haxe_ui_core_ComponentClassMap.register("basicitemrenderer","haxe.ui.core.BasicItemRenderer");
+		haxe_ui_core_ComponentClassMap.register("accordion","haxe.ui.containers.Accordion");
+		haxe_ui_core_ComponentClassMap.register("absolute","haxe.ui.containers.Absolute");
+		haxe_ui_core_LayoutClassMap.register("virtuallayout","haxe.ui.layouts.VirtualLayout");
+		haxe_ui_core_LayoutClassMap.register("virtual","haxe.ui.layouts.VirtualLayout");
+		haxe_ui_core_LayoutClassMap.register("verticalvirtuallayout","haxe.ui.layouts.VerticalVirtualLayout");
+		haxe_ui_core_LayoutClassMap.register("verticalvirtual","haxe.ui.layouts.VerticalVirtualLayout");
+		haxe_ui_core_LayoutClassMap.register("verticallayout","haxe.ui.layouts.VerticalLayout");
+		haxe_ui_core_LayoutClassMap.register("verticalgridlayout","haxe.ui.layouts.VerticalGridLayout");
+		haxe_ui_core_LayoutClassMap.register("verticalgrid","haxe.ui.layouts.VerticalGridLayout");
+		haxe_ui_core_LayoutClassMap.register("vertical","haxe.ui.layouts.VerticalLayout");
+		haxe_ui_core_LayoutClassMap.register("scrollviewlayout","haxe.ui.layouts.ScrollViewLayout");
+		haxe_ui_core_LayoutClassMap.register("scrollview","haxe.ui.layouts.ScrollViewLayout");
+		haxe_ui_core_LayoutClassMap.register("layout","haxe.ui.layouts.Layout");
+		haxe_ui_core_LayoutClassMap.register("horizontallayout","haxe.ui.layouts.HorizontalLayout");
+		haxe_ui_core_LayoutClassMap.register("horizontalgridlayout","haxe.ui.layouts.HorizontalGridLayout");
+		haxe_ui_core_LayoutClassMap.register("horizontalgrid","haxe.ui.layouts.HorizontalGridLayout");
+		haxe_ui_core_LayoutClassMap.register("horizontalcontinuouslayout","haxe.ui.layouts.HorizontalContinuousLayout");
+		haxe_ui_core_LayoutClassMap.register("horizontalcontinuous","haxe.ui.layouts.HorizontalContinuousLayout");
+		haxe_ui_core_LayoutClassMap.register("horizontal","haxe.ui.layouts.HorizontalLayout");
+		haxe_ui_core_LayoutClassMap.register("delegatelayout","haxe.ui.layouts.DelegateLayout");
+		haxe_ui_core_LayoutClassMap.register("delegate","haxe.ui.layouts.DelegateLayout");
+		haxe_ui_core_LayoutClassMap.register("defaultlayout","haxe.ui.layouts.DefaultLayout");
+		haxe_ui_core_LayoutClassMap.register("default","haxe.ui.layouts.DefaultLayout");
+		haxe_ui_core_LayoutClassMap.register("absolutelayout","haxe.ui.layouts.AbsoluteLayout");
+		haxe_ui_core_LayoutClassMap.register("absolute","haxe.ui.layouts.AbsoluteLayout");
+		haxe_ui_core_LayoutClassMap.register("","haxe.ui.layouts.Layout");
+		let section1 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section1.values.h["style"] = "padding:0px; padding-bottom: 1px";
+		section1.values.h["nodeType"] = "button";
+		section1.values.h["id"] = "haxe.ui.components.Button";
+		section1.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		section1.addSection("layout").values.h["class"] = "haxe.ui.backend.html5.native.layouts.ButtonLayout";
+		let section2 = section1.addSection("behaviour");
+		section2.values.h["style"] = "margin-top:-2px;margin-left:-2px;";
+		section2.values.h["id"] = "text";
+		section2.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.SpanText";
+		let section21 = section1.addSection("behaviour");
+		section21.values.h["id"] = "icon";
+		section21.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementImage";
+		let section22 = section1.addSection("behaviour");
+		section22.values.h["id"] = "disabled";
+		section22.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section11 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section11.values.h["type"] = "checkbox";
+		section11.values.h["id"] = "haxe.ui.components.CheckBox";
+		section11.values.h["class"] = "haxe.ui.backend.html5.native.LabeledInputElement";
+		let section23 = section11.addSection("size");
+		section23.values.h["incrementWidthBy"] = "20";
+		section23.values.h["incrementHeightBy"] = "0";
+		section23.values.h["class"] = "haxe.ui.backend.html5.native.size.TextSize";
+		let section24 = section11.addSection("behaviour");
+		section24.values.h["index"] = "last";
+		section24.values.h["id"] = "text";
+		section24.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.SpanText";
+		let section25 = section11.addSection("behaviour");
+		section25.values.h["removeIfNegative"] = "true";
+		section25.values.h["name"] = "checked";
+		section25.values.h["id"] = "selected";
+		section25.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		section25.values.h["child"] = "input";
+		let section26 = section11.addSection("behaviour");
+		section26.values.h["id"] = "disabled";
+		section26.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section12 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section12.values.h["type"] = "radio";
+		section12.values.h["id"] = "haxe.ui.components.OptionBox";
+		section12.values.h["class"] = "haxe.ui.backend.html5.native.LabeledInputElement";
+		let section27 = section12.addSection("size");
+		section27.values.h["incrementWidthBy"] = "20";
+		section27.values.h["incrementHeightBy"] = "0";
+		section27.values.h["class"] = "haxe.ui.backend.html5.native.size.TextSize";
+		let section28 = section12.addSection("behaviour");
+		section28.values.h["index"] = "last";
+		section28.values.h["id"] = "text";
+		section28.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.SpanText";
+		let section29 = section12.addSection("behaviour");
+		section29.values.h["removeIfNegative"] = "true";
+		section29.values.h["name"] = "checked";
+		section29.values.h["id"] = "selected";
+		section29.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		section29.values.h["child"] = "input";
+		let section210 = section12.addSection("behaviour");
+		section210.values.h["removeIfNegative"] = "true";
+		section210.values.h["name"] = "name";
+		section210.values.h["id"] = "componentGroup";
+		section210.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.RadioGroup";
+		section210.values.h["child"] = "input";
+		let section211 = section12.addSection("behaviour");
+		section211.values.h["id"] = "disabled";
+		section211.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section13 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section13.values.h["style"] = "padding-left:2px;cursor:pointer;";
+		section13.values.h["nodeType"] = "input";
+		section13.values.h["id"] = "haxe.ui.components.TextField";
+		section13.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		section13.addSection("size").values.h["class"] = "haxe.ui.backend.html5.native.size.ElementSize";
+		let section212 = section13.addSection("behaviour");
+		section212.values.h["id"] = "text";
+		section212.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementValue";
+		let section213 = section13.addSection("behaviour");
+		section213.values.h["id"] = "placeholder";
+		section213.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementPlaceholder";
+		let section214 = section13.addSection("behaviour");
+		section214.values.h["id"] = "disabled";
+		section214.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section14 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section14.values.h["type"] = "number";
+		section14.values.h["style"] = "padding-left:2px;cursor:pointer;";
+		section14.values.h["nodeType"] = "input";
+		section14.values.h["id"] = "haxe.ui.components.NumberStepper";
+		section14.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		section14.addSection("size").values.h["class"] = "haxe.ui.backend.html5.native.size.ElementSize";
+		let section215 = section14.addSection("behaviour");
+		section215.values.h["id"] = "text";
+		section215.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementValue";
+		let section216 = section14.addSection("behaviour");
+		section216.values.h["name"] = "step";
+		section216.values.h["id"] = "step";
+		section216.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section217 = section14.addSection("behaviour");
+		section217.values.h["id"] = "pos";
+		section217.values.h["class"] = "haxe.ui.core.DefaultBehaviour";
+		let section218 = section14.addSection("behaviour");
+		section218.values.h["id"] = "disabled";
+		section218.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section15 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section15.values.h["style"] = "resize:none;line-height:1.4;";
+		section15.values.h["nodeType"] = "textarea";
+		section15.values.h["id"] = "haxe.ui.components.TextArea";
+		section15.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		section15.addSection("size").values.h["class"] = "haxe.ui.backend.html5.native.size.ElementSize";
+		let section219 = section15.addSection("behaviour");
+		section219.values.h["id"] = "text";
+		section219.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementValue";
+		let section220 = section15.addSection("behaviour");
+		section220.values.h["id"] = "disabled";
+		section220.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section16 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section16.values.h["id"] = "haxe.ui.containers.ScrollView";
+		section16.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		section16.addSection("builder").values.h["class"] = "haxe.ui.backend.html5.native.builders.ScrollViewBuilder";
+		let section221 = section16.addSection("behaviour");
+		section221.values.h["id"] = "disabled";
+		section221.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section222 = section16.addSection("behaviour");
+		section222.values.h["id"] = "hscrollPos";
+		section222.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementScrollLeft";
+		let section223 = section16.addSection("behaviour");
+		section223.values.h["id"] = "vscrollPos";
+		section223.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementScrollTop";
+		let section17 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section17.values.h["id"] = "haxe.ui.containers.ListView";
+		section17.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		let section224 = section17.addSection("behaviour");
+		section224.values.h["id"] = "disabled";
+		section224.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section18 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section18.values.h["id"] = "haxe.ui.containers.TableView";
+		section18.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		let section225 = section18.addSection("behaviour");
+		section225.values.h["id"] = "disabled";
+		section225.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section19 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section19.values.h["style"] = "padding:3px;";
+		section19.values.h["nodeType"] = "select";
+		section19.values.h["id"] = "haxe.ui.components.DropDown";
+		section19.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		section19.values.h["allowChildren"] = "false";
+		section19.addSection("size").values.h["class"] = "haxe.ui.backend.html5.native.size.ElementSize";
+		let section226 = section19.addSection("behaviour");
+		section226.values.h["id"] = "dataSource";
+		section226.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.SelectDataSource";
+		let section227 = section19.addSection("behaviour");
+		section227.values.h["id"] = "selectedItem";
+		section227.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.SelectedItem";
+		let section228 = section19.addSection("behaviour");
+		section228.values.h["id"] = "disabled";
+		section228.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section110 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section110.values.h["nodeType"] = "progress";
+		section110.values.h["id"] = "haxe.ui.components.HorizontalProgress";
+		section110.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		section110.addSection("size").values.h["class"] = "haxe.ui.backend.html5.native.size.ElementSize";
+		let section229 = section110.addSection("behaviour");
+		section229.values.h["name"] = "max";
+		section229.values.h["id"] = "max";
+		section229.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section230 = section110.addSection("behaviour");
+		section230.values.h["name"] = "value";
+		section230.values.h["id"] = "end";
+		section230.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section231 = section110.addSection("behaviour");
+		section231.values.h["remove"] = "true";
+		section231.values.h["name"] = "value";
+		section231.values.h["id"] = "indeterminate";
+		section231.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementAttribute";
+		let section232 = section110.addSection("behaviour");
+		section232.values.h["id"] = "disabled";
+		section232.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section111 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section111.values.h["style"] = "-webkit-transform: rotate(-90deg) translateY(-1000%);-webkit-transform-origin: 100% 0%;-moz-orient: vertical;writing-mode: bt-lr;";
+		section111.values.h["orient"] = "vertical";
+		section111.values.h["nodeType"] = "progress";
+		section111.values.h["id"] = "haxe.ui.components.VerticalProgress";
+		section111.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		section111.addSection("size").values.h["class"] = "haxe.ui.backend.html5.native.size.ElementSize";
+		let section233 = section111.addSection("behaviour");
+		section233.values.h["name"] = "max";
+		section233.values.h["id"] = "max";
+		section233.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section234 = section111.addSection("behaviour");
+		section234.values.h["name"] = "value";
+		section234.values.h["id"] = "end";
+		section234.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section235 = section111.addSection("behaviour");
+		section235.values.h["remove"] = "true";
+		section235.values.h["name"] = "value";
+		section235.values.h["id"] = "indeterminate";
+		section235.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementAttribute";
+		let section236 = section111.addSection("behaviour");
+		section236.values.h["id"] = "disabled";
+		section236.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section112 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section112.values.h["type"] = "range";
+		section112.values.h["style"] = "margin: 0;padding:0;";
+		section112.values.h["nodeType"] = "input";
+		section112.values.h["id"] = "haxe.ui.components.HorizontalSlider";
+		section112.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		section112.values.h["allowChildren"] = "false";
+		section112.addSection("size").values.h["class"] = "haxe.ui.backend.html5.native.size.ElementSize";
+		let section237 = section112.addSection("behaviour");
+		section237.values.h["name"] = "min";
+		section237.values.h["id"] = "min";
+		section237.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section238 = section112.addSection("behaviour");
+		section238.values.h["name"] = "max";
+		section238.values.h["id"] = "max";
+		section238.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section239 = section112.addSection("behaviour");
+		section239.values.h["name"] = "value";
+		section239.values.h["id"] = "pos";
+		section239.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section240 = section112.addSection("behaviour");
+		section240.values.h["name"] = "value";
+		section240.values.h["id"] = "start";
+		section240.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section241 = section112.addSection("behaviour");
+		section241.values.h["name"] = "value";
+		section241.values.h["id"] = "end";
+		section241.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section242 = section112.addSection("behaviour");
+		section242.values.h["id"] = "disabled";
+		section242.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		let section113 = haxe_ui_Toolkit.nativeConfig.addSection("component");
+		section113.values.h["type"] = "range";
+		section113.values.h["style"] = "padding:0;margin: 0;-webkit-appearance: slider-vertical;-moz-orient: vertical;writing-mode: bt-lr;";
+		section113.values.h["orient"] = "vertical";
+		section113.values.h["nodeType"] = "input";
+		section113.values.h["id"] = "haxe.ui.components.VerticalSlider";
+		section113.values.h["class"] = "haxe.ui.backend.html5.native.NativeElement";
+		section113.values.h["allowChildren"] = "false";
+		section113.addSection("size").values.h["class"] = "haxe.ui.backend.html5.native.size.ElementSize";
+		let section243 = section113.addSection("behaviour");
+		section243.values.h["name"] = "min";
+		section243.values.h["id"] = "min";
+		section243.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section244 = section113.addSection("behaviour");
+		section244.values.h["name"] = "max";
+		section244.values.h["id"] = "max";
+		section244.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section245 = section113.addSection("behaviour");
+		section245.values.h["name"] = "value";
+		section245.values.h["id"] = "pos";
+		section245.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section246 = section113.addSection("behaviour");
+		section246.values.h["name"] = "value";
+		section246.values.h["id"] = "start";
+		section246.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section247 = section113.addSection("behaviour");
+		section247.values.h["name"] = "value";
+		section247.values.h["id"] = "end";
+		section247.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementProperty";
+		let section248 = section113.addSection("behaviour");
+		section248.values.h["id"] = "disabled";
+		section248.values.h["class"] = "haxe.ui.backend.html5.native.behaviours.ElementDisabled";
+		haxe_ui_Toolkit.buildBackend();
+		haxe_ui_Toolkit._built = true;
+	}
+	static buildBackend() {
+		if(haxe_ui_Toolkit._backendBuilt == true) {
+			return;
+		}
+		haxe_ui_Toolkit._backendBuilt = true;
+	}
+	static init(options) {
+		haxe_ui_Toolkit.build();
+		haxe_ui_themes_ThemeManager.get_instance().applyTheme(haxe_ui_Toolkit._theme);
+		if(options != null) {
+			haxe_ui_Toolkit.get_screen().set_options(options);
+			haxe_ui_ToolkitAssets.get_instance().options = options;
+		}
+		haxe_ui_Toolkit.get_screen().registerEvent("keydown",haxe_ui_Toolkit.onKeyDown);
+		haxe_ui_Toolkit._initialized = true;
+	}
+	static onKeyDown(event) {
+		if(event.keyCode == 9) {
+			if(event.shiftKey == false) {
+				haxe_ui_focus_FocusManager.get_instance().focusNext();
+			} else {
+				haxe_ui_focus_FocusManager.get_instance().focusPrev();
+			}
+		}
+	}
 	static get_assets() {
 		return haxe_ui_ToolkitAssets.get_instance();
 	}
@@ -4972,9 +5768,18 @@ class haxe_ui_Toolkit {
 }
 $hxClasses["haxe.ui.Toolkit"] = haxe_ui_Toolkit;
 haxe_ui_Toolkit.__name__ = "haxe.ui.Toolkit";
-haxe_ui_Toolkit.__properties__ = {get_scale: "get_scale",get_scaleY: "get_scaleY",get_scaleX: "get_scaleX",get_autoScaleDPIThreshold: "get_autoScaleDPIThreshold",get_screen: "get_screen",get_assets: "get_assets"};
+haxe_ui_Toolkit.__properties__ = {get_scale: "get_scale",get_scaleY: "get_scaleY",get_scaleX: "get_scaleX",get_autoScaleDPIThreshold: "get_autoScaleDPIThreshold",get_screen: "get_screen",get_assets: "get_assets",get_backendProperties: "get_backendProperties"};
 class haxe_ui_backend_AssetsBase {
 	constructor() {
+		if(haxe_ui_backend_AssetsBase._hx_skip_constructor) {
+			return;
+		}
+		this._hx_constructor();
+	}
+	_hx_constructor() {
+	}
+	getTextDelegate(resourceId) {
+		return null;
 	}
 	imageInfoFromImageData(imageData) {
 		return { data : imageData, width : 0, height : 0};
@@ -4986,8 +5791,8 @@ Object.assign(haxe_ui_backend_AssetsBase.prototype, {
 	__class__: haxe_ui_backend_AssetsBase
 });
 class haxe_ui_backend_AssetsImpl extends haxe_ui_backend_AssetsBase {
-	constructor() {
-		super();
+	_hx_constructor() {
+		super._hx_constructor();
 	}
 	getImageInternal(resourceId,callback) {
 		if(haxe_Resource.getBytes(resourceId) != null) {
@@ -5068,7 +5873,14 @@ Object.assign(haxe_ui_backend_AssetsImpl.prototype, {
 });
 class haxe_ui_ToolkitAssets extends haxe_ui_backend_AssetsImpl {
 	constructor() {
+		haxe_ui_backend_AssetsBase._hx_skip_constructor = true;
 		super();
+		haxe_ui_backend_AssetsBase._hx_skip_constructor = false;
+		this._hx_constructor();
+	}
+	_hx_constructor() {
+		this.options = null;
+		super._hx_constructor();
 	}
 	getFont(resourceId,callback,useCache) {
 		if(useCache == null) {
@@ -5145,6 +5957,13 @@ class haxe_ui_ToolkitAssets extends haxe_ui_backend_AssetsImpl {
 		this._imageCache.h[resourceId] = imageInfo;
 		this._imageCallbacks.invokeAndRemove(resourceId,imageInfo);
 	}
+	getText(resourceId) {
+		let s = this.getTextDelegate(resourceId);
+		if(s == null) {
+			s = haxe_Resource.getString(resourceId);
+		}
+		return s;
+	}
 	runPlugins(asset) {
 		if(this._plugins == null) {
 			return asset;
@@ -5167,6 +5986,7 @@ haxe_ui_ToolkitAssets.__properties__ = {get_instance: "get_instance"};
 haxe_ui_ToolkitAssets.__super__ = haxe_ui_backend_AssetsImpl;
 Object.assign(haxe_ui_ToolkitAssets.prototype, {
 	__class__: haxe_ui_ToolkitAssets
+	,options: null
 	,_fontCache: null
 	,_fontCallbacks: null
 	,_imageCache: null
@@ -5248,6 +6068,216 @@ Object.assign(haxe_ui_containers_Box.prototype, {
 	__class__: haxe_ui_containers_Box
 	,_layoutName: null
 	,__properties__: Object.assign({}, haxe_ui_core_Component.prototype.__properties__, {set_icon: "set_icon",get_icon: "get_icon",set_layoutName: "set_layoutName",get_layoutName: "get_layoutName"})
+});
+class haxe_ui_backend_DialogBase extends haxe_ui_containers_Box {
+	constructor() {
+		if(haxe_ui_backend_ComponentSurface._hx_skip_constructor) {
+			super();
+			return;
+		}
+		haxe_ui_backend_ComponentSurface._hx_skip_constructor = true;
+		super();
+		haxe_ui_backend_ComponentSurface._hx_skip_constructor = false;
+		this._hx_constructor();
+	}
+	_hx_constructor() {
+		this._buttonsCreated = false;
+		this._dialogParent = null;
+		this.button = null;
+		this.centerDialog = true;
+		this.buttons = null;
+		this.modal = true;
+		super._hx_constructor();
+		this.dialogContainer = new haxe_ui_containers_VBox();
+		this.dialogContainer.set_id("dialog-container");
+		this.dialogContainer.set_styleNames("dialog-container");
+		this.addComponent(this.dialogContainer);
+		this.dialogTitle = new haxe_ui_containers_HBox();
+		this.dialogTitle.set_id("dialog-title");
+		this.dialogTitle.set_styleNames("dialog-title");
+		this.dialogContainer.addComponent(this.dialogTitle);
+		this.dialogTitleLabel = new haxe_ui_components_Label();
+		this.dialogTitleLabel.set_id("dialog-title-label");
+		this.dialogTitleLabel.set_styleNames("dialog-title-label");
+		this.dialogTitleLabel.set_text("HaxeUI");
+		this.dialogTitle.addComponent(this.dialogTitleLabel);
+		this.dialogCloseButton = new haxe_ui_components_Image();
+		this.dialogCloseButton.set_id("dialog-close-button");
+		this.dialogCloseButton.set_styleNames("dialog-close-button");
+		this.dialogTitle.addComponent(this.dialogCloseButton);
+		this.dialogContent = new haxe_ui_containers_VBox();
+		this.dialogContent.set_id("dialog-content");
+		this.dialogContent.set_styleNames("dialog-content");
+		this.dialogContainer.addComponent(this.dialogContent);
+		this.dialogFooterContainer = new haxe_ui_containers_Box();
+		this.dialogFooterContainer.set_percentWidth(100);
+		this.dialogFooterContainer.set_id("dialog-footer-container");
+		this.dialogFooterContainer.set_styleNames("dialog-footer-container");
+		this.dialogContainer.addComponent(this.dialogFooterContainer);
+		this.dialogFooter = new haxe_ui_containers_HBox();
+		this.dialogFooter.set_id("dialog-footer");
+		this.dialogFooter.set_styleNames("dialog-footer");
+		this.dialogFooterContainer.addComponent(this.dialogFooter);
+		this.dialogFooterContainer.hide();
+		let _gthis = this;
+		this.dialogCloseButton.set_onClick(function(e) {
+			_gthis.hideDialog("Cancel");
+		});
+	}
+	get_dialogParent() {
+		return this._dialogParent;
+	}
+	show() {
+		let dp = this.get_dialogParent();
+		if(this.modal) {
+			this._overlay = new haxe_ui_core_Component();
+			this._overlay.set_id("modal-background");
+			this._overlay.addClass("modal-background");
+			this._overlay.set_percentWidth(this._overlay.set_percentHeight(100));
+			if(dp != null) {
+				dp.addComponent(this._overlay);
+			} else {
+				haxe_ui_core_Screen.get_instance().addComponent(this._overlay);
+			}
+		}
+		this.createButtons();
+		if(dp != null) {
+			dp.addComponent(this);
+		} else {
+			haxe_ui_core_Screen.get_instance().addComponent(this);
+		}
+		this.syncComponentValidation();
+		if(this.get_autoHeight() == false) {
+			this.dialogContainer.set_percentHeight(100);
+			this.dialogContent.set_percentHeight(100);
+		}
+		if(this.centerDialog) {
+			this.centerDialogComponent(js_Boot.__cast(this , haxe_ui_containers_dialogs_Dialog));
+		}
+	}
+	createButtons() {
+		if(this._buttonsCreated == true) {
+			return;
+		}
+		if(this.buttons != null) {
+			let _g = 0;
+			let _g1 = haxe_ui_containers_dialogs_DialogButton.toArray(this.buttons);
+			while(_g < _g1.length) {
+				let button = _g1[_g];
+				++_g;
+				let buttonComponent = new haxe_ui_components_Button();
+				buttonComponent.set_text(haxe_ui_containers_dialogs_DialogButton.toString(button));
+				buttonComponent.userData = button;
+				buttonComponent.registerEvent("click",$bind(this,this.onFooterButtonClick));
+				this.addFooterComponent(buttonComponent);
+			}
+			this._buttonsCreated = true;
+		}
+	}
+	validateDialog(button,fn) {
+		fn(true);
+	}
+	hide() {
+		let _gthis = this;
+		this.validateDialog(this.button,function(result) {
+			if(result == true) {
+				let dp = _gthis.get_dialogParent();
+				if(_gthis.modal && _gthis._overlay != null) {
+					if(dp != null) {
+						dp.removeComponent(_gthis._overlay);
+					} else {
+						haxe_ui_core_Screen.get_instance().removeComponent(_gthis._overlay);
+					}
+				}
+				if(dp != null) {
+					dp.removeComponent(_gthis,false);
+				} else {
+					haxe_ui_core_Screen.get_instance().removeComponent(_gthis);
+				}
+				let event = new haxe_ui_containers_dialogs_DialogEvent("dialogClosed");
+				event.button = _gthis.button;
+				_gthis.dispatch(event);
+			}
+		});
+	}
+	hideDialog(button) {
+		this.button = button;
+		this.hide();
+	}
+	get_title() {
+		return this.dialogTitleLabel.get_text();
+	}
+	set_title(value) {
+		this.dialogTitleLabel.set_text(value);
+		return value;
+	}
+	addComponent(child) {
+		if(child.hasClass("dialog-container")) {
+			return super.addComponent(child);
+		}
+		return this.dialogContent.addComponent(child);
+	}
+	validateComponentLayout() {
+		let b = super.validateComponentLayout();
+		this.dialogTitle.set_width(this.get_layout().get_innerWidth());
+		if(this.get_autoWidth() == false) {
+			this.dialogContent.set_width(this.get_layout().get_innerWidth());
+		}
+		return b;
+	}
+	addFooterComponent(c) {
+		this.dialogFooterContainer.show();
+		this.dialogFooter.addComponent(c);
+	}
+	centerDialogComponent(dialog) {
+		dialog.syncComponentValidation();
+		let dp = this.get_dialogParent();
+		if(dp != null) {
+			dp.syncComponentValidation();
+			dialog.moveComponent(dp.get_width() / 2 - dialog.get_componentWidth() / 2,dp.get_height() / 2 - dialog.get_componentHeight() / 2);
+		} else {
+			dialog.moveComponent(haxe_ui_core_Screen.get_instance().get_width() / 2 - dialog.get_componentWidth() / 2,haxe_ui_core_Screen.get_instance().get_height() / 2 - dialog.get_componentHeight() / 2);
+		}
+	}
+	onFooterButtonClick(event) {
+		this.hideDialog(event.target.userData);
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new haxe_ui_backend_DialogBase();
+	}
+}
+$hxClasses["haxe.ui.backend.DialogBase"] = haxe_ui_backend_DialogBase;
+haxe_ui_backend_DialogBase.__name__ = "haxe.ui.backend.DialogBase";
+haxe_ui_backend_DialogBase.__super__ = haxe_ui_containers_Box;
+Object.assign(haxe_ui_backend_DialogBase.prototype, {
+	__class__: haxe_ui_backend_DialogBase
+	,modal: null
+	,buttons: null
+	,centerDialog: null
+	,button: null
+	,_overlay: null
+	,dialogContainer: null
+	,dialogTitle: null
+	,dialogTitleLabel: null
+	,dialogCloseButton: null
+	,dialogContent: null
+	,dialogFooterContainer: null
+	,dialogFooter: null
+	,_dialogParent: null
+	,_buttonsCreated: null
+	,__properties__: Object.assign({}, haxe_ui_containers_Box.prototype.__properties__, {set_title: "set_title",get_title: "get_title",get_dialogParent: "get_dialogParent"})
 });
 class haxe_ui_backend_EventBase {
 }
@@ -5363,6 +6393,83 @@ Object.assign(haxe_ui_backend_ImageDisplayImpl.prototype, {
 	__class__: haxe_ui_backend_ImageDisplayImpl
 	,element: null
 });
+class haxe_ui_containers_dialogs_Dialog extends haxe_ui_backend_DialogBase {
+	_hx_constructor() {
+		super._hx_constructor();
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new haxe_ui_containers_dialogs_Dialog();
+	}
+}
+$hxClasses["haxe.ui.containers.dialogs.Dialog"] = haxe_ui_containers_dialogs_Dialog;
+haxe_ui_containers_dialogs_Dialog.__name__ = "haxe.ui.containers.dialogs.Dialog";
+haxe_ui_containers_dialogs_Dialog.__super__ = haxe_ui_backend_DialogBase;
+Object.assign(haxe_ui_containers_dialogs_Dialog.prototype, {
+	__class__: haxe_ui_containers_dialogs_Dialog
+});
+class haxe_ui_backend_MessageBoxBase extends haxe_ui_containers_dialogs_Dialog {
+	constructor() {
+		haxe_ui_backend_ComponentSurface._hx_skip_constructor = true;
+		super();
+		haxe_ui_backend_ComponentSurface._hx_skip_constructor = false;
+		this._hx_constructor();
+	}
+	_hx_constructor() {
+		this._type = null;
+		super._hx_constructor();
+		let hbox = new haxe_ui_containers_HBox();
+		hbox.set_percentWidth(100);
+		hbox.set_styleString("spacing:10px;");
+		this.addComponent(hbox);
+		this.iconImage = new haxe_ui_components_Image();
+		this.iconImage.set_id("iconImage");
+		hbox.addComponent(this.iconImage);
+		this.messageLabel = new haxe_ui_components_Label();
+		this.messageLabel.set_id("messageLabel");
+		this.messageLabel.set_percentWidth(100);
+		hbox.addComponent(this.messageLabel);
+	}
+	get_type() {
+		return this._type;
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new haxe_ui_backend_MessageBoxBase();
+	}
+}
+$hxClasses["haxe.ui.backend.MessageBoxBase"] = haxe_ui_backend_MessageBoxBase;
+haxe_ui_backend_MessageBoxBase.__name__ = "haxe.ui.backend.MessageBoxBase";
+haxe_ui_backend_MessageBoxBase.__super__ = haxe_ui_containers_dialogs_Dialog;
+Object.assign(haxe_ui_backend_MessageBoxBase.prototype, {
+	__class__: haxe_ui_backend_MessageBoxBase
+	,iconImage: null
+	,messageLabel: null
+	,_type: null
+	,__properties__: Object.assign({}, haxe_ui_containers_dialogs_Dialog.prototype.__properties__, {get_type: "get_type"})
+});
 class haxe_ui_backend_PlatformBase {
 	constructor() {
 	}
@@ -5434,6 +6541,10 @@ class haxe_ui_backend_ScreenBase {
 	get_options() {
 		return this._options;
 	}
+	set_options(value) {
+		this._options = value;
+		return value;
+	}
 	get_width() {
 		return 0;
 	}
@@ -5458,7 +6569,7 @@ Object.assign(haxe_ui_backend_ScreenBase.prototype, {
 	,_options: null
 	,width: null
 	,height: null
-	,__properties__: {get_height: "get_height",get_width: "get_width",get_options: "get_options",set_focus: "set_focus"}
+	,__properties__: {get_height: "get_height",get_width: "get_width",set_options: "set_options",get_options: "get_options",set_focus: "set_focus"}
 });
 class haxe_ui_backend_ScreenImpl extends haxe_ui_backend_ScreenBase {
 	constructor() {
@@ -5473,6 +6584,19 @@ class haxe_ui_backend_ScreenImpl extends haxe_ui_backend_ScreenBase {
 		this._percentContainerWidthAdded = false;
 		super._hx_constructor();
 		this._mapping = new haxe_ds_StringMap();
+	}
+	set_options(value) {
+		super.set_options(value);
+		let cx = haxe_ui_Toolkit.get_backendProperties().getProp("haxe.ui.html5.container.width",null);
+		let cy = haxe_ui_Toolkit.get_backendProperties().getProp("haxe.ui.html5.container.height",null);
+		let c = this.get_container();
+		if(cx != null) {
+			c.style.width = cx;
+		}
+		if(cy != null) {
+			c.style.height = cy;
+		}
+		return value;
 	}
 	get_dpi() {
 		return haxe_ui_backend_html5_HtmlUtils.get_dpi();
@@ -8478,9 +9602,11 @@ haxe_ui_focus_IFocusable.__name__ = "haxe.ui.focus.IFocusable";
 haxe_ui_focus_IFocusable.__isInterface__ = true;
 Object.assign(haxe_ui_focus_IFocusable.prototype, {
 	__class__: haxe_ui_focus_IFocusable
+	,get_focus: null
 	,set_focus: null
+	,get_allowFocus: null
 	,set_allowFocus: null
-	,__properties__: {set_allowFocus: "set_allowFocus",set_focus: "set_focus"}
+	,__properties__: {set_allowFocus: "set_allowFocus",get_allowFocus: "get_allowFocus",set_focus: "set_focus",get_focus: "get_focus"}
 });
 class haxe_ui_core_InteractiveComponent extends haxe_ui_core_Component {
 	constructor() {
@@ -10500,6 +11626,11 @@ class haxe_ui_components_DropDown extends haxe_ui_components_Button {
 	get_handlerStyleNames() {
 		return haxe_ui_util_Variant.toString(this.behaviours.get("handlerStyleNames"));
 	}
+	set_handlerStyleNames(value) {
+		this.behaviours.set("handlerStyleNames",haxe_ui_util_Variant.fromString(value));
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"handlerStyleNames");
+		return value;
+	}
 	get_dataSource() {
 		return haxe_ui_util_Variant.toDataSource(this.behaviours.get("dataSource"));
 	}
@@ -10510,6 +11641,11 @@ class haxe_ui_components_DropDown extends haxe_ui_components_Button {
 	}
 	get_type() {
 		return haxe_ui_util_Variant.toString(this.behaviours.get("type"));
+	}
+	set_type(value) {
+		this.behaviours.set("type",haxe_ui_util_Variant.fromString(value));
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"type");
+		return value;
 	}
 	get_virtual() {
 		return haxe_ui_util_Variant.toBool(this.behaviours.get("virtual"));
@@ -10567,7 +11703,7 @@ haxe_ui_components_DropDown.__interfaces__ = [haxe_ui_core_IDataComponent];
 haxe_ui_components_DropDown.__super__ = haxe_ui_components_Button;
 Object.assign(haxe_ui_components_DropDown.prototype, {
 	__class__: haxe_ui_components_DropDown
-	,__properties__: Object.assign({}, haxe_ui_components_Button.prototype.__properties__, {set_selectedItem: "set_selectedItem",get_selectedItem: "get_selectedItem",set_selectedIndex: "set_selectedIndex",get_selectedIndex: "get_selectedIndex",get_dropdownSize: "get_dropdownSize",get_dropdownHeight: "get_dropdownHeight",get_dropdownWidth: "get_dropdownWidth",get_virtual: "get_virtual",get_type: "get_type",set_dataSource: "set_dataSource",get_dataSource: "get_dataSource",get_handlerStyleNames: "get_handlerStyleNames"})
+	,__properties__: Object.assign({}, haxe_ui_components_Button.prototype.__properties__, {set_selectedItem: "set_selectedItem",get_selectedItem: "get_selectedItem",set_selectedIndex: "set_selectedIndex",get_selectedIndex: "get_selectedIndex",get_dropdownSize: "get_dropdownSize",get_dropdownHeight: "get_dropdownHeight",get_dropdownWidth: "get_dropdownWidth",get_virtual: "get_virtual",set_type: "set_type",get_type: "get_type",set_dataSource: "set_dataSource",get_dataSource: "get_dataSource",set_handlerStyleNames: "set_handlerStyleNames",get_handlerStyleNames: "get_handlerStyleNames"})
 });
 class haxe_ui_components__$DropDown_HideDropDown extends haxe_ui_behaviours_DefaultBehaviour {
 	constructor(component) {
@@ -12228,6 +13364,104 @@ Object.assign(haxe_ui_components__$Label_Builder.prototype, {
 	__class__: haxe_ui_components__$Label_Builder
 	,_label: null
 });
+class haxe_ui_components_NumberStepper extends haxe_ui_core_InteractiveComponent {
+	constructor() {
+		super();
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+		this.behaviours.register("pos",haxe_ui_components__$NumberStepper_PosBehaviour,haxe_ui_util_Variant.fromFloat(0));
+		this.behaviours.register("step",haxe_ui_components__$NumberStepper_StepBehaviour,haxe_ui_util_Variant.fromFloat(1));
+		this.behaviours.register("min",haxe_ui_components__$NumberStepper_MinBehaviour,null);
+		this.behaviours.register("max",haxe_ui_components__$NumberStepper_MaxBehaviour,null);
+		this.behaviours.register("precision",haxe_ui_components__$NumberStepper_PrecisionBehaviour,null);
+	}
+	get_pos() {
+		return haxe_ui_util_Variant.toFloat(this.behaviours.get("pos"));
+	}
+	set_pos(value) {
+		this.behaviours.set("pos",haxe_ui_util_Variant.fromFloat(value));
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"value");
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"pos");
+		return value;
+	}
+	get_step() {
+		return haxe_ui_util_Variant.toFloat(this.behaviours.get("step"));
+	}
+	set_step(value) {
+		this.behaviours.set("step",haxe_ui_util_Variant.fromFloat(value));
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"step");
+		return value;
+	}
+	get_min() {
+		return haxe_ui_util_Variant.toFloat(this.behaviours.get("min"));
+	}
+	set_min(value) {
+		this.behaviours.set("min",haxe_ui_util_Variant.fromFloat(value));
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"min");
+		return value;
+	}
+	get_max() {
+		return haxe_ui_util_Variant.toFloat(this.behaviours.get("max"));
+	}
+	set_max(value) {
+		this.behaviours.set("max",haxe_ui_util_Variant.fromFloat(value));
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"max");
+		return value;
+	}
+	get_precision() {
+		return haxe_ui_util_Variant.toInt(this.behaviours.get("precision"));
+	}
+	set_precision(value) {
+		this.behaviours.set("precision",haxe_ui_util_Variant.fromFloat(value));
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"precision");
+		return value;
+	}
+	get_value() {
+		return this.get_pos();
+	}
+	set_value(value) {
+		this.set_pos(value);
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"pos");
+		return value;
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		c.set_pos(this.get_pos());
+		c.set_step(this.get_step());
+		if(this.get_min() != null) {
+			c.set_min(this.get_min());
+		}
+		if(this.get_max() != null) {
+			c.set_max(this.get_max());
+		}
+		if(this.get_precision() != null) {
+			c.set_precision(this.get_precision());
+		}
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new haxe_ui_components_NumberStepper();
+	}
+	registerComposite() {
+		super.registerComposite();
+		this._internalEventsClass = haxe_ui_components__$NumberStepper_Events;
+		this._compositeBuilderClass = haxe_ui_components__$NumberStepper_Builder;
+		this._defaultLayoutClass = haxe_ui_layouts_HorizontalLayout;
+	}
+}
+$hxClasses["haxe.ui.components.NumberStepper"] = haxe_ui_components_NumberStepper;
+haxe_ui_components_NumberStepper.__name__ = "haxe.ui.components.NumberStepper";
+haxe_ui_components_NumberStepper.__super__ = haxe_ui_core_InteractiveComponent;
+Object.assign(haxe_ui_components_NumberStepper.prototype, {
+	__class__: haxe_ui_components_NumberStepper
+	,__properties__: Object.assign({}, haxe_ui_core_InteractiveComponent.prototype.__properties__, {set_precision: "set_precision",get_precision: "get_precision",set_max: "set_max",get_max: "get_max",set_min: "set_min",get_min: "get_min",set_step: "set_step",get_step: "get_step",set_pos: "set_pos",get_pos: "get_pos"})
+});
 class haxe_ui_components__$NumberStepper_PosBehaviour extends haxe_ui_behaviours_DataBehaviour {
 	constructor(component) {
 		super(component);
@@ -12333,6 +13567,169 @@ haxe_ui_components__$NumberStepper_PrecisionBehaviour.__name__ = "haxe.ui.compon
 haxe_ui_components__$NumberStepper_PrecisionBehaviour.__super__ = haxe_ui_behaviours_DefaultBehaviour;
 Object.assign(haxe_ui_components__$NumberStepper_PrecisionBehaviour.prototype, {
 	__class__: haxe_ui_components__$NumberStepper_PrecisionBehaviour
+});
+class haxe_ui_components__$NumberStepper_Builder extends haxe_ui_core_CompositeBuilder {
+	constructor(stepper) {
+		super(stepper);
+		this._stepper = stepper;
+	}
+	create() {
+		this._stepper.addClass("textfield");
+		let textfield = new haxe_ui_components_TextField();
+		textfield.addClass("stepper-textfield");
+		textfield.set_id("stepper-textfield");
+		textfield.set_restrictChars("0-9\\-\\.\\,");
+		this._stepper.addComponent(textfield);
+		let step = new haxe_ui_components_Stepper();
+		step.addClass("stepper-step");
+		step.set_id("stepper-step");
+		this._stepper.addComponent(step);
+	}
+	applyStyle(style) {
+		let textfield = this._stepper.findComponent(null,haxe_ui_components_TextField);
+		if(textfield != null && (textfield.customStyle.color != style.color || textfield.customStyle.fontName != style.fontName || textfield.customStyle.fontSize != style.fontSize || textfield.customStyle.cursor != style.cursor)) {
+			textfield.customStyle.color = style.color;
+			textfield.customStyle.fontName = style.fontName;
+			textfield.customStyle.fontSize = style.fontSize;
+			textfield.customStyle.cursor = style.cursor;
+			textfield.invalidateComponent("style");
+		}
+	}
+}
+$hxClasses["haxe.ui.components._NumberStepper.Builder"] = haxe_ui_components__$NumberStepper_Builder;
+haxe_ui_components__$NumberStepper_Builder.__name__ = "haxe.ui.components._NumberStepper.Builder";
+haxe_ui_components__$NumberStepper_Builder.__super__ = haxe_ui_core_CompositeBuilder;
+Object.assign(haxe_ui_components__$NumberStepper_Builder.prototype, {
+	__class__: haxe_ui_components__$NumberStepper_Builder
+	,_stepper: null
+});
+class haxe_ui_components__$NumberStepper_Events extends haxe_ui_events_Events {
+	constructor(stepper) {
+		super(stepper);
+		this._stepper = stepper;
+	}
+	register() {
+		if(!this.hasEvent("mousewheel",$bind(this,this.onMouseWheel))) {
+			this.registerEvent("mousewheel",$bind(this,this.onMouseWheel));
+		}
+		if(!this._stepper.hasEvent("keydown",$bind(this,this.onKeyDown))) {
+			this._stepper.registerEvent("keydown",$bind(this,this.onKeyDown));
+		}
+		let textfield = this._stepper.findComponent("stepper-textfield",haxe_ui_components_TextField);
+		if(!textfield.hasEvent("keyup",$bind(this,this.onTextFieldKeyUp))) {
+			textfield.registerEvent("keyup",$bind(this,this.onTextFieldKeyUp));
+		}
+		if(!textfield.hasEvent("focusin",$bind(this,this.onTextFieldFocusIn))) {
+			textfield.registerEvent("focusin",$bind(this,this.onTextFieldFocusIn));
+		}
+		if(!textfield.hasEvent("focusout",$bind(this,this.onTextFieldFocusOut))) {
+			textfield.registerEvent("focusout",$bind(this,this.onTextFieldFocusOut));
+		}
+		if(!textfield.hasEvent("change",$bind(this,this.onTextFieldChange))) {
+			textfield.registerEvent("change",$bind(this,this.onTextFieldChange));
+		}
+		let step = this._stepper.findComponent("stepper-step",haxe_ui_components_Stepper);
+		if(!step.hasEvent("change",$bind(this,this.onStepChange))) {
+			step.registerEvent("change",$bind(this,this.onStepChange));
+		}
+		if(!step.hasEvent("mousedown",$bind(this,this.onStepMouseDown))) {
+			step.registerEvent("mousedown",$bind(this,this.onStepMouseDown));
+		}
+	}
+	unregister() {
+		this.unregisterEvent("mousewheel",$bind(this,this.onMouseWheel));
+		this._stepper.unregisterEvent("keydown",$bind(this,this.onKeyDown));
+		let textfield = this._stepper.findComponent("stepper-textfield",haxe_ui_components_TextField);
+		textfield.unregisterEvent("keydown",$bind(this,this.onTextFieldKeyUp));
+		textfield.unregisterEvent("focusin",$bind(this,this.onTextFieldFocusIn));
+		textfield.unregisterEvent("focusout",$bind(this,this.onTextFieldFocusOut));
+		textfield.unregisterEvent("change",$bind(this,this.onTextFieldChange));
+		let step = this._stepper.findComponent("stepper-step",haxe_ui_components_Stepper);
+		step.unregisterEvent("change",$bind(this,this.onStepChange));
+		step.unregisterEvent("mousedown",$bind(this,this.onStepMouseDown));
+	}
+	onKeyDown(event) {
+		let step = this._stepper.findComponent("stepper-step",haxe_ui_components_Stepper);
+		if(event.keyCode == 38 || event.keyCode == 39 || event.keyCode == 107) {
+			step.increment();
+		}
+		if(event.keyCode == 40 || event.keyCode == 37 || event.keyCode == 109) {
+			step.deincrement();
+		}
+		if(event.keyCode == 36) {
+			step.set_pos(step.get_min());
+		}
+		if(event.keyCode == 35) {
+			step.set_pos(step.get_max());
+		}
+	}
+	onMouseWheel(event) {
+		this._stepper.findComponent("stepper-textfield",haxe_ui_components_TextField).set_focus(true);
+		let step = this._stepper.findComponent("stepper-step",haxe_ui_components_Stepper);
+		if(event.delta > 0) {
+			step.increment();
+		} else {
+			step.deincrement();
+		}
+	}
+	onStepChange(event) {
+		let step = this._stepper.findComponent("stepper-step",haxe_ui_components_Stepper);
+		this._stepper.set_pos(step.get_pos());
+	}
+	onStepMouseDown(event) {
+		this._stepper.findComponent("stepper-textfield",haxe_ui_components_TextField).set_focus(true);
+	}
+	onTextFieldKeyUp(event) {
+		if(event.keyCode == 13) {
+			this._stepper.findComponent("stepper-textfield",haxe_ui_components_TextField).set_focus(false);
+		}
+		event.cancel();
+	}
+	onTextFieldFocusIn(event) {
+		this._stepper.addClass(":active");
+	}
+	onTextFieldFocusOut(event) {
+		this._stepper.removeClass(":active");
+		let textfield = this._stepper.findComponent("stepper-textfield",haxe_ui_components_TextField);
+		if(textfield != null) {
+			let tmp = this._stepper;
+			let v = parseFloat(textfield.get_text());
+			let min = this._stepper.get_min();
+			let max = this._stepper.get_max();
+			let tmp1;
+			if(v == null || isNaN(v)) {
+				tmp1 = min;
+			} else {
+				if(min != null && v < min) {
+					v = min;
+				} else if(max != null && v > max) {
+					v = max;
+				}
+				tmp1 = v;
+			}
+			tmp.set_pos(tmp1);
+			textfield.set_text(Std.string(this._stepper.get_pos()));
+		} else {
+			event.cancel();
+		}
+	}
+	onTextFieldChange(event) {
+		this._stepper.findComponent("stepper-step",haxe_ui_components_Stepper);
+		let textfield = this._stepper.findComponent("stepper-textfield",haxe_ui_components_TextField);
+		let lastChar = textfield.get_text().charAt(textfield.get_text().length - 1);
+		let maxCappedVal = Math.min(parseFloat(textfield.get_text()),this._stepper.get_max());
+		textfield.set_text(maxCappedVal == null ? "null" : "" + maxCappedVal);
+		if(Std.parseInt(lastChar) == null) {
+			textfield.set_text(textfield.get_text() + lastChar);
+		}
+	}
+}
+$hxClasses["haxe.ui.components._NumberStepper.Events"] = haxe_ui_components__$NumberStepper_Events;
+haxe_ui_components__$NumberStepper_Events.__name__ = "haxe.ui.components._NumberStepper.Events";
+haxe_ui_components__$NumberStepper_Events.__super__ = haxe_ui_events_Events;
+Object.assign(haxe_ui_components__$NumberStepper_Events.prototype, {
+	__class__: haxe_ui_components__$NumberStepper_Events
+	,_stepper: null
 });
 class haxe_ui_components_OptionBox extends haxe_ui_components_CheckBox {
 	constructor() {
@@ -13206,8 +14603,8 @@ Object.assign(haxe_ui_components_Spacer.prototype, {
 	__class__: haxe_ui_components_Spacer
 });
 class haxe_ui_containers_VBox extends haxe_ui_containers_Box {
-	constructor() {
-		super();
+	_hx_constructor() {
+		super._hx_constructor();
 		this.set_layout(new haxe_ui_layouts_VerticalLayout());
 	}
 	registerBehaviours() {
@@ -19417,6 +20814,766 @@ haxe_ui_containers__$TableView_SelectionModeBehaviour.__super__ = haxe_ui_behavi
 Object.assign(haxe_ui_containers__$TableView_SelectionModeBehaviour.prototype, {
 	__class__: haxe_ui_containers__$TableView_SelectionModeBehaviour
 });
+class haxe_ui_containers_dialogs_DialogButton {
+	static toArray(this1) {
+		let a = [];
+		let _g = 0;
+		let _g1 = (this1 == null ? "null" : "" + this1).split("|");
+		while(_g < _g1.length) {
+			let i = _g1[_g];
+			++_g;
+			i = StringTools.trim(i);
+			if(i.length == 0 || i == "null") {
+				continue;
+			}
+			a.push(i);
+		}
+		return a;
+	}
+	static toString(this1) {
+		if(this1 == null) {
+			return "null";
+		} else {
+			return "" + this1;
+		}
+	}
+}
+class haxe_ui_containers_dialogs_DialogEvent extends haxe_ui_events_UIEvent {
+	constructor(type,bubble,data) {
+		super(type,bubble,data);
+	}
+	clone() {
+		let c = new haxe_ui_containers_dialogs_DialogEvent(this.type);
+		c.type = this.type;
+		c.bubble = this.bubble;
+		c.target = this.target;
+		c.data = this.data;
+		c.canceled = this.canceled;
+		c.button = this.button;
+		this.postClone(c);
+		return c;
+	}
+}
+$hxClasses["haxe.ui.containers.dialogs.DialogEvent"] = haxe_ui_containers_dialogs_DialogEvent;
+haxe_ui_containers_dialogs_DialogEvent.__name__ = "haxe.ui.containers.dialogs.DialogEvent";
+haxe_ui_containers_dialogs_DialogEvent.__super__ = haxe_ui_events_UIEvent;
+Object.assign(haxe_ui_containers_dialogs_DialogEvent.prototype, {
+	__class__: haxe_ui_containers_dialogs_DialogEvent
+	,button: null
+});
+class haxe_ui_containers_dialogs_MessageBox extends haxe_ui_backend_MessageBoxBase {
+	constructor() {
+		super();
+		this.set_title("Message");
+	}
+	onInitialize() {
+		super.onInitialize();
+		if(haxe_ui_containers_dialogs_DialogButton.toArray(this.buttons).length == 0) {
+			switch(this.get_type()) {
+			case "error":
+				this.buttons = "Close";
+				break;
+			case "info":
+				this.buttons = "OK";
+				break;
+			case "question":
+				let larr = "Yes".split("|");
+				let rarr = "No".split("|");
+				let _g = 0;
+				while(_g < rarr.length) {
+					let r = rarr[_g];
+					++_g;
+					if(larr.indexOf(r) == -1) {
+						larr.push(r);
+					}
+				}
+				let larr1 = haxe_ui_containers_dialogs_DialogButton.toString(larr.join("|")).split("|");
+				let rarr1 = haxe_ui_containers_dialogs_DialogButton.toString("Cancel").split("|");
+				let _g1 = 0;
+				while(_g1 < rarr1.length) {
+					let r = rarr1[_g1];
+					++_g1;
+					if(larr1.indexOf(r) == -1) {
+						larr1.push(r);
+					}
+				}
+				this.buttons = larr1.join("|");
+				break;
+			case "warning":
+				this.buttons = "Close";
+				break;
+			}
+			this.createButtons();
+		}
+		if(this.get_title() == "Message") {
+			switch(this.get_type()) {
+			case "error":
+				this.set_title("Error");
+				break;
+			case "info":
+				this.set_title("Info");
+				break;
+			case "question":
+				this.set_title("Question");
+				break;
+			case "warning":
+				this.set_title("Warning");
+				break;
+			}
+		}
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new haxe_ui_containers_dialogs_MessageBox();
+	}
+}
+$hxClasses["haxe.ui.containers.dialogs.MessageBox"] = haxe_ui_containers_dialogs_MessageBox;
+haxe_ui_containers_dialogs_MessageBox.__name__ = "haxe.ui.containers.dialogs.MessageBox";
+haxe_ui_containers_dialogs_MessageBox.__super__ = haxe_ui_backend_MessageBoxBase;
+Object.assign(haxe_ui_containers_dialogs_MessageBox.prototype, {
+	__class__: haxe_ui_containers_dialogs_MessageBox
+});
+class haxe_ui_containers_menus_MenuEvent extends haxe_ui_events_UIEvent {
+	constructor(type,bubble,data) {
+		haxe_ui_events_UIEvent._hx_skip_constructor = true;
+		super();
+		haxe_ui_events_UIEvent._hx_skip_constructor = false;
+		this._hx_constructor(type,bubble,data);
+	}
+	_hx_constructor(type,bubble,data) {
+		if(bubble == null) {
+			bubble = false;
+		}
+		this.menuItem = null;
+		this.menu = null;
+		super._hx_constructor(type,true,data);
+	}
+	clone() {
+		let c = new haxe_ui_containers_menus_MenuEvent(this.type);
+		c.menu = this.menu;
+		c.menuItem = this.menuItem;
+		c.type = this.type;
+		c.bubble = this.bubble;
+		c.target = this.target;
+		c.data = this.data;
+		c.canceled = this.canceled;
+		this.postClone(c);
+		return c;
+	}
+}
+$hxClasses["haxe.ui.containers.menus.MenuEvent"] = haxe_ui_containers_menus_MenuEvent;
+haxe_ui_containers_menus_MenuEvent.__name__ = "haxe.ui.containers.menus.MenuEvent";
+haxe_ui_containers_menus_MenuEvent.__super__ = haxe_ui_events_UIEvent;
+Object.assign(haxe_ui_containers_menus_MenuEvent.prototype, {
+	__class__: haxe_ui_containers_menus_MenuEvent
+	,menu: null
+	,menuItem: null
+});
+class haxe_ui_containers_menus_Menu extends haxe_ui_containers_VBox {
+	constructor() {
+		super();
+	}
+	registerComposite() {
+		super.registerComposite();
+		this._internalEventsClass = haxe_ui_containers_menus_MenuEvents;
+		this._compositeBuilderClass = haxe_ui_containers_menus__$Menu_Builder;
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+		this.behaviours.register("menuStyleNames",haxe_ui_behaviours_DefaultBehaviour);
+	}
+	get_menuStyleNames() {
+		return haxe_ui_util_Variant.toString(this.behaviours.get("menuStyleNames"));
+	}
+	set_menuStyleNames(value) {
+		this.behaviours.set("menuStyleNames",haxe_ui_util_Variant.fromString(value));
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"menuStyleNames");
+		return value;
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new haxe_ui_containers_menus_Menu();
+	}
+}
+$hxClasses["haxe.ui.containers.menus.Menu"] = haxe_ui_containers_menus_Menu;
+haxe_ui_containers_menus_Menu.__name__ = "haxe.ui.containers.menus.Menu";
+haxe_ui_containers_menus_Menu.__super__ = haxe_ui_containers_VBox;
+Object.assign(haxe_ui_containers_menus_Menu.prototype, {
+	__class__: haxe_ui_containers_menus_Menu
+	,__properties__: Object.assign({}, haxe_ui_containers_VBox.prototype.__properties__, {set_menuStyleNames: "set_menuStyleNames",get_menuStyleNames: "get_menuStyleNames"})
+});
+class haxe_ui_containers_menus_MenuEvents extends haxe_ui_events_Events {
+	constructor(menu) {
+		haxe_ui_events_Events._hx_skip_constructor = true;
+		super();
+		haxe_ui_events_Events._hx_skip_constructor = false;
+		this._hx_constructor(menu);
+	}
+	_hx_constructor(menu) {
+		this._over = false;
+		this.parentMenu = null;
+		this.currentSubMenu = null;
+		super._hx_constructor(menu);
+		this._menu = menu;
+	}
+	register() {
+		if(!this.hasEvent("mouseover",$bind(this,this.onMouseOver))) {
+			this.registerEvent("mouseover",$bind(this,this.onMouseOver));
+		}
+		if(!this.hasEvent("mouseout",$bind(this,this.onMouseOut))) {
+			this.registerEvent("mouseout",$bind(this,this.onMouseOut));
+		}
+		let _g = 0;
+		let _this = this._menu;
+		let _g1 = _this._children == null ? [] : _this._children;
+		while(_g < _g1.length) {
+			let child = _g1[_g];
+			++_g;
+			if(((child) instanceof haxe_ui_containers_menus_MenuItem)) {
+				let item = js_Boot.__cast(child , haxe_ui_containers_menus_MenuItem);
+				if(!item.hasEvent("click",$bind(this,this.onItemClick))) {
+					item.registerEvent("click",$bind(this,this.onItemClick));
+				}
+				if(!item.hasEvent("mouseover",$bind(this,this.onItemMouseOver))) {
+					item.registerEvent("mouseover",$bind(this,this.onItemMouseOver));
+				}
+				if(!item.hasEvent("mouseout",$bind(this,this.onItemMouseOut))) {
+					item.registerEvent("mouseout",$bind(this,this.onItemMouseOut));
+				}
+			}
+		}
+		if(!this.hasEvent("hidden",$bind(this,this.onHidden))) {
+			this.registerEvent("hidden",$bind(this,this.onHidden));
+		}
+	}
+	unregister() {
+		this.unregisterEvent("mouseover",$bind(this,this.onMouseOver));
+		this.unregisterEvent("mouseout",$bind(this,this.onMouseOut));
+		let _g = 0;
+		let _this = this._menu;
+		let _g1 = _this._children == null ? [] : _this._children;
+		while(_g < _g1.length) {
+			let child = _g1[_g];
+			++_g;
+			child.unregisterEvent("click",$bind(this,this.onItemClick));
+			child.unregisterEvent("mouseover",$bind(this,this.onItemMouseOver));
+			child.unregisterEvent("mouseout",$bind(this,this.onItemMouseOut));
+		}
+		this.unregisterEvent("hidden",$bind(this,this.onHidden));
+	}
+	onMouseOver(event) {
+		this._over = true;
+	}
+	onMouseOut(event) {
+		this._over = false;
+	}
+	onItemClick(event) {
+		let item = js_Boot.__cast(event.target , haxe_ui_containers_menus_MenuItem);
+		if(!item.get_expandable()) {
+			let event = new haxe_ui_containers_menus_MenuEvent("menuselected");
+			event.menu = this._menu;
+			event.menuItem = item;
+			this.findRootMenu().dispatch(event);
+			this.hideCurrentSubMenu();
+			this.findRootMenu().hide();
+		}
+	}
+	onItemMouseOver(event) {
+		let subMenus = (js_Boot.__cast(this._menu._compositeBuilder , haxe_ui_containers_menus__$Menu_Builder))._subMenus;
+		let item = js_Boot.__cast(event.target , haxe_ui_containers_menus_MenuItem);
+		let _g = 0;
+		let _this = this._menu;
+		let _g1 = _this._children == null ? [] : _this._children;
+		while(_g < _g1.length) {
+			let child = _g1[_g];
+			++_g;
+			if(child != item) {
+				child.removeClass(":hover",true,true);
+			}
+		}
+		if(subMenus.h[item.__id__] != null) {
+			this.showSubMenu(js_Boot.__cast(subMenus.h[item.__id__] , haxe_ui_containers_menus_Menu),item);
+		} else {
+			this.hideCurrentSubMenu();
+		}
+	}
+	onItemMouseOut(event) {
+		if(this.currentSubMenu != null) {
+			event.target.addClass(":hover",true,true);
+			return;
+		}
+	}
+	showSubMenu(subMenu,source) {
+		this.hideCurrentSubMenu();
+		subMenu.set_menuStyleNames(this._menu.get_menuStyleNames());
+		subMenu.addClass(this._menu.get_menuStyleNames());
+		let componentOffset = source.getComponentOffset();
+		let left = source.get_screenLeft() + source.get_actualComponentWidth() + componentOffset.x;
+		let top = source.get_screenTop();
+		haxe_ui_core_Screen.get_instance().addComponent(subMenu);
+		subMenu.syncComponentValidation();
+		if(left + subMenu.get_actualComponentWidth() > haxe_ui_core_Screen.get_instance().get_width()) {
+			left = source.get_screenLeft() - subMenu.get_actualComponentWidth();
+		}
+		subMenu.set_left(left);
+		subMenu.set_top(top);
+		this.currentSubMenu = subMenu;
+	}
+	hideCurrentSubMenu() {
+		if(this.currentSubMenu == null) {
+			return;
+		}
+		let _g = 0;
+		let _this = this.currentSubMenu;
+		let _g1 = _this._children == null ? [] : _this._children;
+		while(_g < _g1.length) _g1[_g++].removeClass(":hover",true,true);
+		(js_Boot.__cast(this.currentSubMenu._internalEvents , haxe_ui_containers_menus_MenuEvents)).hideCurrentSubMenu();
+		haxe_ui_core_Screen.get_instance().removeComponent(this.currentSubMenu);
+		this.currentSubMenu = null;
+	}
+	onHidden(event) {
+		let _g = 0;
+		let _this = this._menu;
+		let _g1 = _this._children == null ? [] : _this._children;
+		while(_g < _g1.length) _g1[_g++].removeClass(":hover",true,true);
+		this.hideCurrentSubMenu();
+	}
+	findRootMenu() {
+		let root = null;
+		let ref = this._menu;
+		while(ref != null) {
+			let events = js_Boot.__cast(ref._internalEvents , haxe_ui_containers_menus_MenuEvents);
+			if(events.parentMenu == null) {
+				root = events._menu;
+				break;
+			}
+			ref = events.parentMenu;
+		}
+		return root;
+	}
+}
+$hxClasses["haxe.ui.containers.menus.MenuEvents"] = haxe_ui_containers_menus_MenuEvents;
+haxe_ui_containers_menus_MenuEvents.__name__ = "haxe.ui.containers.menus.MenuEvents";
+haxe_ui_containers_menus_MenuEvents.__super__ = haxe_ui_events_Events;
+Object.assign(haxe_ui_containers_menus_MenuEvents.prototype, {
+	__class__: haxe_ui_containers_menus_MenuEvents
+	,_menu: null
+	,currentSubMenu: null
+	,parentMenu: null
+	,_over: null
+});
+class haxe_ui_containers_menus__$Menu_Builder extends haxe_ui_core_CompositeBuilder {
+	constructor(menu) {
+		haxe_ui_core_CompositeBuilder._hx_skip_constructor = true;
+		super();
+		haxe_ui_core_CompositeBuilder._hx_skip_constructor = false;
+		this._hx_constructor(menu);
+	}
+	_hx_constructor(menu) {
+		this._subMenus = new haxe_ds_ObjectMap();
+		super._hx_constructor(menu);
+		this._menu = menu;
+	}
+	addComponent(child) {
+		if(((child) instanceof haxe_ui_containers_menus_Menu)) {
+			let menu = js_Boot.__cast(child , haxe_ui_containers_menus_Menu);
+			let item = new haxe_ui_containers_menus_MenuItem();
+			item.set_text(child.get_text());
+			item.set_icon(menu.get_icon());
+			item.set_expandable(true);
+			this._menu.addComponent(item);
+			(js_Boot.__cast(menu._internalEvents , haxe_ui_containers_menus_MenuEvents)).parentMenu = this._menu;
+			this._subMenus.set(item,menu);
+			return child;
+		}
+		return null;
+	}
+	onComponentAdded(child) {
+		if(((child) instanceof haxe_ui_containers_menus_Menu) || ((child) instanceof haxe_ui_containers_menus_MenuItem)) {
+			this._menu.registerInternalEvents(null,true);
+		}
+	}
+	findComponent(criteria,type,recursive,searchType) {
+		let match = super.findComponent(criteria,type,recursive,searchType);
+		if(match == null) {
+			let menu = this._subMenus.iterator();
+			while(menu.hasNext()) {
+				let menu1 = menu.next();
+				match = menu1.findComponent(criteria,type,recursive,searchType);
+				if(menu1.matchesSearch(criteria,type,searchType)) {
+					return menu1;
+				} else {
+					match = menu1.findComponent(criteria,type,recursive,searchType);
+				}
+				if(match != null) {
+					break;
+				}
+			}
+		}
+		return match;
+	}
+}
+$hxClasses["haxe.ui.containers.menus._Menu.Builder"] = haxe_ui_containers_menus__$Menu_Builder;
+haxe_ui_containers_menus__$Menu_Builder.__name__ = "haxe.ui.containers.menus._Menu.Builder";
+haxe_ui_containers_menus__$Menu_Builder.__super__ = haxe_ui_core_CompositeBuilder;
+Object.assign(haxe_ui_containers_menus__$Menu_Builder.prototype, {
+	__class__: haxe_ui_containers_menus__$Menu_Builder
+	,_menu: null
+	,_subMenus: null
+});
+class haxe_ui_containers_menus_MenuBar extends haxe_ui_containers_HBox {
+	constructor() {
+		super();
+	}
+	registerComposite() {
+		super.registerComposite();
+		this._internalEventsClass = haxe_ui_containers_menus__$MenuBar_Events;
+		this._compositeBuilderClass = haxe_ui_containers_menus__$MenuBar_Builder;
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+		this.behaviours.register("menuStyleNames",haxe_ui_behaviours_DefaultBehaviour);
+	}
+	get_menuStyleNames() {
+		return haxe_ui_util_Variant.toString(this.behaviours.get("menuStyleNames"));
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new haxe_ui_containers_menus_MenuBar();
+	}
+}
+$hxClasses["haxe.ui.containers.menus.MenuBar"] = haxe_ui_containers_menus_MenuBar;
+haxe_ui_containers_menus_MenuBar.__name__ = "haxe.ui.containers.menus.MenuBar";
+haxe_ui_containers_menus_MenuBar.__super__ = haxe_ui_containers_HBox;
+Object.assign(haxe_ui_containers_menus_MenuBar.prototype, {
+	__class__: haxe_ui_containers_menus_MenuBar
+	,__properties__: Object.assign({}, haxe_ui_containers_HBox.prototype.__properties__, {get_menuStyleNames: "get_menuStyleNames"})
+});
+class haxe_ui_containers_menus__$MenuBar_Events extends haxe_ui_events_Events {
+	constructor(menubar) {
+		super(menubar);
+		this._menubar = menubar;
+	}
+	register() {
+		let _g = 0;
+		let _g1 = (js_Boot.__cast(this._menubar._compositeBuilder , haxe_ui_containers_menus__$MenuBar_Builder))._buttons;
+		while(_g < _g1.length) {
+			let button = _g1[_g];
+			++_g;
+			if(!button.hasEvent("click",$bind(this,this.onButtonClick))) {
+				button.registerEvent("click",$bind(this,this.onButtonClick));
+			}
+			if(!button.hasEvent("mouseover",$bind(this,this.onButtonOver))) {
+				button.registerEvent("mouseover",$bind(this,this.onButtonOver));
+			}
+		}
+	}
+	unregister() {
+		let _g = 0;
+		let _g1 = (js_Boot.__cast(this._menubar._compositeBuilder , haxe_ui_containers_menus__$MenuBar_Builder))._buttons;
+		while(_g < _g1.length) {
+			let button = _g1[_g];
+			++_g;
+			button.unregisterEvent("click",$bind(this,this.onButtonClick));
+			button.unregisterEvent("mouseover",$bind(this,this.onButtonOver));
+		}
+	}
+	onButtonClick(event) {
+		let target = js_Boot.__cast(event.target , haxe_ui_components_Button);
+		let index = (js_Boot.__cast(this._menubar._compositeBuilder , haxe_ui_containers_menus__$MenuBar_Builder))._buttons.indexOf(target);
+		if(target.get_selected() == true) {
+			this.showMenu(index);
+		} else {
+			(js_Boot.__cast(this._currentButton._internalEvents , haxe_ui_components_ButtonEvents)).lastMouseEvent = event;
+			this.hideCurrentMenu();
+		}
+	}
+	onButtonOver(event) {
+		if(this._currentMenu == null) {
+			return;
+		}
+		let builder = js_Boot.__cast(this._menubar._compositeBuilder , haxe_ui_containers_menus__$MenuBar_Builder);
+		let index = builder._buttons.indexOf(js_Boot.__cast(event.target , haxe_ui_components_Button));
+		if(builder._menus[index] != this._currentMenu) {
+			this.showMenu(index);
+		}
+	}
+	showMenu(index) {
+		let builder = js_Boot.__cast(this._menubar._compositeBuilder , haxe_ui_containers_menus__$MenuBar_Builder);
+		let target = builder._buttons[index];
+		let menu = builder._menus[index];
+		if(this._currentMenu == menu) {
+			return;
+		}
+		let _g = 0;
+		let _g1 = builder._buttons;
+		while(_g < _g1.length) {
+			let button = _g1[_g];
+			++_g;
+			if(button != target) {
+				button.set_selected(false);
+			}
+		}
+		target.set_selected(true);
+		this.hideCurrentMenu();
+		let componentOffset = target.getComponentOffset();
+		let left = target.get_screenLeft() + componentOffset.x;
+		let top = target.get_screenTop() + (target.get_actualComponentHeight() - haxe_ui_Toolkit.get_scaleY()) + componentOffset.y;
+		menu.set_menuStyleNames(this._menubar.get_menuStyleNames());
+		menu.addClasses([this._menubar.get_menuStyleNames(),"expanded"]);
+		if(menu.findComponent("menu-filler",null,false) == null) {
+			let filler = new haxe_ui_core_Component();
+			filler.set_horizontalAlign("right");
+			filler.set_includeInLayout(false);
+			filler.addClass("menu-filler");
+			filler.set_id("menu-filler");
+			menu.addComponent(filler);
+		}
+		menu.show();
+		haxe_ui_core_Screen.get_instance().addComponent(menu);
+		menu.syncComponentValidation();
+		if(left + menu.get_actualComponentWidth() > haxe_ui_core_Screen.get_instance().get_width()) {
+			left = target.get_screenLeft() - menu.get_actualComponentWidth() + target.get_actualComponentWidth();
+		}
+		menu.set_left(left);
+		menu.set_top(top - haxe_ui_Toolkit.get_scaleY());
+		this._currentButton = target;
+		this._currentMenu = menu;
+		let cx = menu.get_width() - this._currentButton.get_width();
+		let filler = menu.findComponent("menu-filler",null,false);
+		if(cx > 0 && filler != null) {
+			cx += 2;
+			filler.set_width(cx);
+			filler.set_left(menu.get_width() - cx);
+			filler.set_hidden(false);
+		} else if(filler != null) {
+			filler.set_hidden(true);
+		}
+		haxe_ui_core_Screen.get_instance().registerEvent("mousedown",$bind(this,this.onScreenMouseDown));
+		if(!this._currentMenu.hasEvent("menuselected",$bind(this,this.onMenuSelected))) {
+			this._currentMenu.registerEvent("menuselected",$bind(this,this.onMenuSelected));
+		}
+	}
+	hideCurrentMenu() {
+		if(this._currentMenu != null) {
+			this._currentMenu.unregisterEvent("menuselected",$bind(this,this.onMenuSelected));
+			this._currentMenu.hide();
+			this._currentButton.set_selected(false);
+			haxe_ui_core_Screen.get_instance().unregisterEvent("mousedown",$bind(this,this.onScreenMouseDown));
+			haxe_ui_core_Screen.get_instance().removeComponent(this._currentMenu);
+			this._currentButton = null;
+			this._currentMenu = null;
+		}
+	}
+	onScreenMouseDown(event) {
+		let close = true;
+		if(this._currentMenu.hitTest(event.screenX,event.screenY)) {
+			close = false;
+		} else if(this._currentButton.hitTest(event.screenX,event.screenY)) {
+			close = false;
+		} else {
+			let ref = this._currentMenu;
+			let refEvents = js_Boot.__cast(ref._internalEvents , haxe_ui_containers_menus_MenuEvents);
+			let refSubMenu = refEvents.currentSubMenu;
+			while(refSubMenu != null) {
+				if(refSubMenu.hitTest(event.screenX,event.screenY)) {
+					close = false;
+					break;
+				}
+				ref = refSubMenu;
+				refEvents = js_Boot.__cast(ref._internalEvents , haxe_ui_containers_menus_MenuEvents);
+				refSubMenu = refEvents.currentSubMenu;
+			}
+		}
+		if(close) {
+			this.hideCurrentMenu();
+		}
+	}
+	onMenuSelected(event) {
+		let newEvent = new haxe_ui_containers_menus_MenuEvent("menuselected");
+		newEvent.menu = event.menu;
+		newEvent.menuItem = event.menuItem;
+		this._menubar.dispatch(newEvent);
+		this.hideCurrentMenu();
+	}
+}
+$hxClasses["haxe.ui.containers.menus._MenuBar.Events"] = haxe_ui_containers_menus__$MenuBar_Events;
+haxe_ui_containers_menus__$MenuBar_Events.__name__ = "haxe.ui.containers.menus._MenuBar.Events";
+haxe_ui_containers_menus__$MenuBar_Events.__super__ = haxe_ui_events_Events;
+Object.assign(haxe_ui_containers_menus__$MenuBar_Events.prototype, {
+	__class__: haxe_ui_containers_menus__$MenuBar_Events
+	,_menubar: null
+	,_currentMenu: null
+	,_currentButton: null
+});
+class haxe_ui_containers_menus__$MenuBar_Builder extends haxe_ui_core_CompositeBuilder {
+	constructor(menubar) {
+		haxe_ui_core_CompositeBuilder._hx_skip_constructor = true;
+		super();
+		haxe_ui_core_CompositeBuilder._hx_skip_constructor = false;
+		this._hx_constructor(menubar);
+	}
+	_hx_constructor(menubar) {
+		this._menus = [];
+		this._buttons = [];
+		super._hx_constructor(menubar);
+		this._menubar = menubar;
+	}
+	create() {
+	}
+	destroy() {
+	}
+	addComponent(child) {
+		if(((child) instanceof haxe_ui_containers_menus_Menu)) {
+			let menu = js_Boot.__cast(child , haxe_ui_containers_menus_Menu);
+			let button = new haxe_ui_components_Button();
+			button.set_styleNames("menubar-button");
+			button.set_text(menu.get_text());
+			button.set_icon(menu.get_icon());
+			button.set_toggle(true);
+			this._buttons.push(button);
+			this._menubar.addComponent(button);
+			this._menubar.registerInternalEvents(null,true);
+			this._menus.push(js_Boot.__cast(child , haxe_ui_containers_menus_Menu));
+			return child;
+		}
+		return null;
+	}
+	addComponentAt(child,index) {
+		return null;
+	}
+	removeComponent(child,dispose,invalidate) {
+		if(invalidate == null) {
+			invalidate = true;
+		}
+		if(dispose == null) {
+			dispose = true;
+		}
+		return null;
+	}
+	getComponentIndex(child) {
+		return -1;
+	}
+	setComponentIndex(child,index) {
+		return null;
+	}
+	getComponentAt(index) {
+		return null;
+	}
+	findComponent(criteria,type,recursive,searchType) {
+		let match = super.findComponent(criteria,type,recursive,searchType);
+		if(match == null) {
+			let _g = 0;
+			let _g1 = this._menus;
+			while(_g < _g1.length) {
+				let menu = _g1[_g];
+				++_g;
+				match = menu.findComponent(criteria,type,recursive,searchType);
+				if(menu.matchesSearch(criteria,type,searchType)) {
+					return menu;
+				} else {
+					match = menu.findComponent(criteria,type,recursive,searchType);
+				}
+				if(match != null) {
+					break;
+				}
+			}
+		}
+		return match;
+	}
+}
+$hxClasses["haxe.ui.containers.menus._MenuBar.Builder"] = haxe_ui_containers_menus__$MenuBar_Builder;
+haxe_ui_containers_menus__$MenuBar_Builder.__name__ = "haxe.ui.containers.menus._MenuBar.Builder";
+haxe_ui_containers_menus__$MenuBar_Builder.__super__ = haxe_ui_core_CompositeBuilder;
+Object.assign(haxe_ui_containers_menus__$MenuBar_Builder.prototype, {
+	__class__: haxe_ui_containers_menus__$MenuBar_Builder
+	,_menubar: null
+	,_buttons: null
+	,_menus: null
+});
+class haxe_ui_containers_menus_MenuItem extends haxe_ui_containers_HBox {
+	constructor() {
+		super();
+	}
+	registerComposite() {
+		super.registerComposite();
+		this._internalEventsClass = haxe_ui_containers_menus__$MenuItem_Events;
+		this._compositeBuilderClass = haxe_ui_containers_menus__$MenuItem_Builder;
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+		this.behaviours.register("text",haxe_ui_containers_menus__$MenuItem_TextBehaviour);
+		this.behaviours.register("shortcutText",haxe_ui_containers_menus__$MenuItem_ShortcutTextBehaviour);
+		this.behaviours.register("icon",haxe_ui_containers_menus__$MenuItem_IconBehaviour);
+		this.behaviours.register("expandable",haxe_ui_containers_menus__$MenuItem_ExpandableBehaviour);
+	}
+	get_shortcutText() {
+		return haxe_ui_util_Variant.toString(this.behaviours.get("shortcutText"));
+	}
+	set_shortcutText(value) {
+		this.behaviours.set("shortcutText",haxe_ui_util_Variant.fromString(value));
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"shortcutText");
+		return value;
+	}
+	get_expandable() {
+		return haxe_ui_util_Variant.toBool(this.behaviours.get("expandable"));
+	}
+	set_expandable(value) {
+		this.behaviours.set("expandable",haxe_ui_util_Variant.fromBool(value));
+		haxe_ui_binding_BindingManager.get_instance().componentPropChanged(this,"expandable");
+		return value;
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if(this.get_shortcutText() != null) {
+			c.set_shortcutText(this.get_shortcutText());
+		}
+		c.set_expandable(this.get_expandable());
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new haxe_ui_containers_menus_MenuItem();
+	}
+}
+$hxClasses["haxe.ui.containers.menus.MenuItem"] = haxe_ui_containers_menus_MenuItem;
+haxe_ui_containers_menus_MenuItem.__name__ = "haxe.ui.containers.menus.MenuItem";
+haxe_ui_containers_menus_MenuItem.__super__ = haxe_ui_containers_HBox;
+Object.assign(haxe_ui_containers_menus_MenuItem.prototype, {
+	__class__: haxe_ui_containers_menus_MenuItem
+	,__properties__: Object.assign({}, haxe_ui_containers_HBox.prototype.__properties__, {set_expandable: "set_expandable",get_expandable: "get_expandable",set_shortcutText: "set_shortcutText",get_shortcutText: "get_shortcutText"})
+});
 class haxe_ui_containers_menus__$MenuCheckBox_TextBehaviour extends haxe_ui_behaviours_DataBehaviour {
 	constructor(component) {
 		super(component);
@@ -19557,6 +21714,63 @@ haxe_ui_containers_menus__$MenuItem_ExpandableBehaviour.__name__ = "haxe.ui.cont
 haxe_ui_containers_menus__$MenuItem_ExpandableBehaviour.__super__ = haxe_ui_behaviours_DataBehaviour;
 Object.assign(haxe_ui_containers_menus__$MenuItem_ExpandableBehaviour.prototype, {
 	__class__: haxe_ui_containers_menus__$MenuItem_ExpandableBehaviour
+});
+class haxe_ui_containers_menus__$MenuItem_Events extends haxe_ui_events_Events {
+	constructor(target) {
+		super(target);
+	}
+	register() {
+		if(!this.hasEvent("mouseover",$bind(this,this.onMouseOver))) {
+			this.registerEvent("mouseover",$bind(this,this.onMouseOver));
+		}
+		if(!this.hasEvent("mouseout",$bind(this,this.onMouseOut))) {
+			this.registerEvent("mouseout",$bind(this,this.onMouseOut));
+		}
+	}
+	unregister() {
+		this.unregisterEvent("mouseover",$bind(this,this.onMouseOver));
+		this.unregisterEvent("mouseout",$bind(this,this.onMouseOut));
+	}
+	onMouseOver(event) {
+		this._target.addClass(":hover",true,true);
+	}
+	onMouseOut(event) {
+		this._target.removeClass(":hover",true,true);
+	}
+}
+$hxClasses["haxe.ui.containers.menus._MenuItem.Events"] = haxe_ui_containers_menus__$MenuItem_Events;
+haxe_ui_containers_menus__$MenuItem_Events.__name__ = "haxe.ui.containers.menus._MenuItem.Events";
+haxe_ui_containers_menus__$MenuItem_Events.__super__ = haxe_ui_events_Events;
+Object.assign(haxe_ui_containers_menus__$MenuItem_Events.prototype, {
+	__class__: haxe_ui_containers_menus__$MenuItem_Events
+});
+class haxe_ui_containers_menus__$MenuItem_Builder extends haxe_ui_core_CompositeBuilder {
+	constructor(component) {
+		super(component);
+	}
+	create() {
+		super.create();
+		let box = new haxe_ui_containers_Box();
+		box.set_percentWidth(100);
+		box.set_verticalAlign("center");
+		let label = new haxe_ui_components_Label();
+		label.set_id("menuitem-label");
+		label.set_styleNames("menuitem-label");
+		label.scriptAccess = false;
+		box.addComponent(label);
+		let label1 = new haxe_ui_components_Label();
+		label1.set_id("menuitem-shortcut-label");
+		label1.set_styleNames("menuitem-shortcut-label");
+		label1.scriptAccess = false;
+		box.addComponent(label1);
+		this._component.addComponent(box);
+	}
+}
+$hxClasses["haxe.ui.containers.menus._MenuItem.Builder"] = haxe_ui_containers_menus__$MenuItem_Builder;
+haxe_ui_containers_menus__$MenuItem_Builder.__name__ = "haxe.ui.containers.menus._MenuItem.Builder";
+haxe_ui_containers_menus__$MenuItem_Builder.__super__ = haxe_ui_core_CompositeBuilder;
+Object.assign(haxe_ui_containers_menus__$MenuItem_Builder.prototype, {
+	__class__: haxe_ui_containers_menus__$MenuItem_Builder
 });
 class haxe_ui_containers_menus__$MenuOptionBox_GroupBehaviour extends haxe_ui_behaviours_DataBehaviour {
 	constructor(component) {
@@ -19810,6 +22024,96 @@ Object.assign(haxe_ui_containers_properties_PropertyBuilder.prototype, {
 	,editor: null
 	,label: null
 });
+class haxe_ui_containers_properties_PropertyGrid extends haxe_ui_containers_ScrollView {
+	constructor() {
+		super();
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+		this.behaviours.register("popupStyleNames",haxe_ui_behaviours_DefaultBehaviour);
+	}
+	get_popupStyleNames() {
+		return haxe_ui_util_Variant.toString(this.behaviours.get("popupStyleNames"));
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new haxe_ui_containers_properties_PropertyGrid();
+	}
+	registerComposite() {
+		super.registerComposite();
+		this._internalEventsClass = haxe_ui_containers_properties__$PropertyGrid_Events;
+		this._compositeBuilderClass = haxe_ui_containers_properties__$PropertyGrid_Builder;
+	}
+}
+$hxClasses["haxe.ui.containers.properties.PropertyGrid"] = haxe_ui_containers_properties_PropertyGrid;
+haxe_ui_containers_properties_PropertyGrid.__name__ = "haxe.ui.containers.properties.PropertyGrid";
+haxe_ui_containers_properties_PropertyGrid.__super__ = haxe_ui_containers_ScrollView;
+Object.assign(haxe_ui_containers_properties_PropertyGrid.prototype, {
+	__class__: haxe_ui_containers_properties_PropertyGrid
+	,__properties__: Object.assign({}, haxe_ui_containers_ScrollView.prototype.__properties__, {get_popupStyleNames: "get_popupStyleNames"})
+});
+class haxe_ui_containers_properties__$PropertyGrid_Events extends haxe_ui_containers_ScrollViewEvents {
+	constructor(scrollview) {
+		super(scrollview);
+	}
+}
+$hxClasses["haxe.ui.containers.properties._PropertyGrid.Events"] = haxe_ui_containers_properties__$PropertyGrid_Events;
+haxe_ui_containers_properties__$PropertyGrid_Events.__name__ = "haxe.ui.containers.properties._PropertyGrid.Events";
+haxe_ui_containers_properties__$PropertyGrid_Events.__super__ = haxe_ui_containers_ScrollViewEvents;
+Object.assign(haxe_ui_containers_properties__$PropertyGrid_Events.prototype, {
+	__class__: haxe_ui_containers_properties__$PropertyGrid_Events
+});
+class haxe_ui_containers_properties__$PropertyGrid_Builder extends haxe_ui_containers_ScrollViewBuilder {
+	constructor(scrollview) {
+		super(scrollview);
+	}
+}
+$hxClasses["haxe.ui.containers.properties._PropertyGrid.Builder"] = haxe_ui_containers_properties__$PropertyGrid_Builder;
+haxe_ui_containers_properties__$PropertyGrid_Builder.__name__ = "haxe.ui.containers.properties._PropertyGrid.Builder";
+haxe_ui_containers_properties__$PropertyGrid_Builder.__super__ = haxe_ui_containers_ScrollViewBuilder;
+Object.assign(haxe_ui_containers_properties__$PropertyGrid_Builder.prototype, {
+	__class__: haxe_ui_containers_properties__$PropertyGrid_Builder
+});
+class haxe_ui_containers_properties_PropertyGroup extends haxe_ui_containers_VBox {
+	constructor() {
+		super();
+	}
+	registerComposite() {
+		super.registerComposite();
+		this._internalEventsClass = haxe_ui_containers_properties__$PropertyGroup_Events;
+		this._compositeBuilderClass = haxe_ui_containers_properties__$PropertyGroup_Builder;
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+		this.behaviours.register("text",haxe_ui_containers_properties__$PropertyGroup_TextBehaviour);
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new haxe_ui_containers_properties_PropertyGroup();
+	}
+}
+$hxClasses["haxe.ui.containers.properties.PropertyGroup"] = haxe_ui_containers_properties_PropertyGroup;
+haxe_ui_containers_properties_PropertyGroup.__name__ = "haxe.ui.containers.properties.PropertyGroup";
+haxe_ui_containers_properties_PropertyGroup.__super__ = haxe_ui_containers_VBox;
+Object.assign(haxe_ui_containers_properties_PropertyGroup.prototype, {
+	__class__: haxe_ui_containers_properties_PropertyGroup
+});
 class haxe_ui_containers_properties__$PropertyGroup_TextBehaviour extends haxe_ui_behaviours_DataBehaviour {
 	constructor(component) {
 		super(component);
@@ -19823,6 +22127,154 @@ haxe_ui_containers_properties__$PropertyGroup_TextBehaviour.__name__ = "haxe.ui.
 haxe_ui_containers_properties__$PropertyGroup_TextBehaviour.__super__ = haxe_ui_behaviours_DataBehaviour;
 Object.assign(haxe_ui_containers_properties__$PropertyGroup_TextBehaviour.prototype, {
 	__class__: haxe_ui_containers_properties__$PropertyGroup_TextBehaviour
+});
+class haxe_ui_containers_properties__$PropertyGroup_Events extends haxe_ui_events_Events {
+	constructor(target) {
+		super(target);
+	}
+	register() {
+		let header = this._target.findComponent("property-group-header",haxe_ui_core_Component);
+		if(header.hasEvent("click") == false) {
+			header.registerEvent("click",$bind(this,this.onHeaderClicked));
+		}
+	}
+	unregister() {
+		this._target.findComponent("property-group-header",haxe_ui_core_Component).unregisterEvent("click",$bind(this,this.onHeaderClicked));
+	}
+	onHeaderClicked(event) {
+		let header = this._target.findComponent("property-group-header",haxe_ui_core_Component);
+		let contents = this._target.findComponent("property-group-contents",haxe_ui_core_Component);
+		if(header.hasClass(":expanded")) {
+			header.swapClass(":collapsed",":expanded",true,true);
+			contents.set_hidden(true);
+		} else {
+			header.swapClass(":expanded",":collapsed",true,true);
+			contents.set_hidden(false);
+		}
+	}
+}
+$hxClasses["haxe.ui.containers.properties._PropertyGroup.Events"] = haxe_ui_containers_properties__$PropertyGroup_Events;
+haxe_ui_containers_properties__$PropertyGroup_Events.__name__ = "haxe.ui.containers.properties._PropertyGroup.Events";
+haxe_ui_containers_properties__$PropertyGroup_Events.__super__ = haxe_ui_events_Events;
+Object.assign(haxe_ui_containers_properties__$PropertyGroup_Events.prototype, {
+	__class__: haxe_ui_containers_properties__$PropertyGroup_Events
+});
+class haxe_ui_containers_properties__$PropertyGroup_Builder extends haxe_ui_core_CompositeBuilder {
+	constructor(propertyGroup) {
+		super(propertyGroup);
+		this._propertyGroup = propertyGroup;
+	}
+	onReady() {
+		let propGrid = this._component.findAncestor(null,haxe_ui_containers_properties_PropertyGrid);
+		let _g = 0;
+		let _g1 = this._propertyGroupContents.findComponents(null,haxe_ui_components_DropDown);
+		while(_g < _g1.length) _g1[_g++].set_handlerStyleNames(propGrid.get_popupStyleNames());
+	}
+	create() {
+		this._propertyGroupHeader = new haxe_ui_containers_HBox();
+		this._propertyGroupHeader.scriptAccess = false;
+		this._propertyGroupHeader.addClass("property-group-header");
+		this._propertyGroupHeader.addClass(":expanded");
+		this._propertyGroupHeader.set_id("property-group-header");
+		let image = new haxe_ui_components_Image();
+		image.addClass("property-group-header-icon");
+		image.scriptAccess = false;
+		this._propertyGroupHeader.addComponent(image);
+		let label = new haxe_ui_components_Label();
+		label.addClass("property-group-header-label");
+		label.set_id("property-group-header-label");
+		label.scriptAccess = false;
+		this._propertyGroupHeader.addComponent(label);
+		this._propertyGroup.addComponent(this._propertyGroupHeader);
+		this._propertyGroupContents = new haxe_ui_containers_Grid();
+		this._propertyGroupContents.scriptAccess = false;
+		this._propertyGroupContents.addClass("property-group-contents");
+		this._propertyGroupContents.set_id("property-group-contents");
+		this._propertyGroup.addComponent(this._propertyGroupContents);
+	}
+	addComponent(child) {
+		if(((child) instanceof haxe_ui_containers_properties_Property)) {
+			let prop = js_Boot.__cast(child , haxe_ui_containers_properties_Property);
+			let labelContainer = new haxe_ui_containers_Box();
+			labelContainer.scriptAccess = false;
+			labelContainer.addClass("property-group-item-label-container");
+			this._propertyGroupContents.addComponent(labelContainer);
+			let label = new haxe_ui_components_Label();
+			label.scriptAccess = false;
+			label.set_text(prop.get_label());
+			label.addClass("property-group-item-label");
+			labelContainer.addComponent(label);
+			(js_Boot.__cast(prop._compositeBuilder , haxe_ui_containers_properties_PropertyBuilder)).label = label;
+			let editorContainer = new haxe_ui_containers_Box();
+			editorContainer.scriptAccess = false;
+			editorContainer.addClass("property-group-item-editor-container");
+			this._propertyGroupContents.addComponent(editorContainer);
+			let editor = this.buildEditor(prop);
+			editor.scriptAccess = false;
+			editor.set_id(child.get_id());
+			editor.addClass("property-group-item-editor");
+			editorContainer.addComponent(editor);
+			editor.registerEvent("change",$bind(this,this.onPropertyEditorChange));
+			(js_Boot.__cast(prop._compositeBuilder , haxe_ui_containers_properties_PropertyBuilder)).editor = editor;
+			this._propertyGroup.registerInternalEvents(haxe_ui_containers_properties__$PropertyGroup_Events,true);
+			return editor;
+		}
+		return null;
+	}
+	onPropertyEditorChange(event) {
+		let newEvent = new haxe_ui_events_UIEvent("change");
+		newEvent.target = event.target;
+		this._component.findAncestor(null,haxe_ui_containers_properties_PropertyGrid).dispatch(newEvent);
+	}
+	buildEditor(property) {
+		let c = null;
+		switch(property.get_type()) {
+		case "boolean":
+			c = new haxe_ui_components_CheckBox();
+			c.set_value(property.get_value());
+			break;
+		case "date":
+			c = new haxe_ui_components_DropDown();
+			(js_Boot.__cast(c , haxe_ui_components_DropDown)).set_type("date");
+			break;
+		case "int":
+			c = new haxe_ui_components_NumberStepper();
+			c.set_value(property.get_value());
+			break;
+		case "list":
+			c = new haxe_ui_components_DropDown();
+			(js_Boot.__cast(c , haxe_ui_components_DropDown)).set_dataSource(property.get_dataSource());
+			let indexToSelect = 0;
+			let _g = 0;
+			let _g1 = property.get_dataSource().get_size();
+			while(_g < _g1) {
+				let i = _g++;
+				if(property.get_dataSource().get(i).value == property.get_value()) {
+					indexToSelect = i;
+					break;
+				}
+			}
+			(js_Boot.__cast(c , haxe_ui_components_DropDown)).set_selectedIndex(indexToSelect);
+			break;
+		case "text":
+			c = new haxe_ui_components_TextField();
+			c.set_value(property.get_value());
+			break;
+		default:
+			c = new haxe_ui_components_TextField();
+			c.set_value(property.get_value());
+		}
+		return c;
+	}
+}
+$hxClasses["haxe.ui.containers.properties._PropertyGroup.Builder"] = haxe_ui_containers_properties__$PropertyGroup_Builder;
+haxe_ui_containers_properties__$PropertyGroup_Builder.__name__ = "haxe.ui.containers.properties._PropertyGroup.Builder";
+haxe_ui_containers_properties__$PropertyGroup_Builder.__super__ = haxe_ui_core_CompositeBuilder;
+Object.assign(haxe_ui_containers_properties__$PropertyGroup_Builder.prototype, {
+	__class__: haxe_ui_containers_properties__$PropertyGroup_Builder
+	,_propertyGroup: null
+	,_propertyGroupHeader: null
+	,_propertyGroupContents: null
 });
 class haxe_ui_core_BasicItemRenderer extends haxe_ui_core_ItemRenderer {
 	constructor() {
@@ -19864,6 +22316,30 @@ haxe_ui_core_BasicItemRenderer.__name__ = "haxe.ui.core.BasicItemRenderer";
 haxe_ui_core_BasicItemRenderer.__super__ = haxe_ui_core_ItemRenderer;
 Object.assign(haxe_ui_core_BasicItemRenderer.prototype, {
 	__class__: haxe_ui_core_BasicItemRenderer
+});
+class haxe_ui_core_ComponentClassMap {
+	constructor() {
+		this._map = new haxe_ds_StringMap();
+	}
+	registerClassName(alias,className) {
+		this._map.h[alias] = className;
+	}
+	static get_instance() {
+		if(haxe_ui_core_ComponentClassMap._instance == null) {
+			haxe_ui_core_ComponentClassMap._instance = new haxe_ui_core_ComponentClassMap();
+		}
+		return haxe_ui_core_ComponentClassMap._instance;
+	}
+	static register(alias,className) {
+		haxe_ui_core_ComponentClassMap.get_instance().registerClassName(alias.toLowerCase(),className);
+	}
+}
+$hxClasses["haxe.ui.core.ComponentClassMap"] = haxe_ui_core_ComponentClassMap;
+haxe_ui_core_ComponentClassMap.__name__ = "haxe.ui.core.ComponentClassMap";
+haxe_ui_core_ComponentClassMap.__properties__ = {get_instance: "get_instance"};
+Object.assign(haxe_ui_core_ComponentClassMap.prototype, {
+	__class__: haxe_ui_core_ComponentClassMap
+	,_map: null
 });
 class haxe_ui_core_ComponentDisabledBehaviour extends haxe_ui_behaviours_DataBehaviour {
 	constructor(component) {
@@ -20023,6 +22499,31 @@ Object.assign(haxe_ui_core_ImageDisplay.prototype, {
 	,_isValidating: null
 	,__properties__: {set_imageClipRect: "set_imageClipRect",get_imageClipRect: "get_imageClipRect",set_imageInfo: "set_imageInfo",set_imageHeight: "set_imageHeight",get_imageHeight: "get_imageHeight",set_imageWidth: "set_imageWidth",get_imageWidth: "get_imageWidth",set_top: "set_top",set_left: "set_left"}
 });
+class haxe_ui_core_LayoutClassMap {
+	constructor() {
+		this._map = new haxe_ds_StringMap();
+	}
+	registerClassName(alias,className) {
+		this._map.h[alias] = className;
+	}
+	static get_instance() {
+		if(haxe_ui_core_LayoutClassMap._instance == null) {
+			haxe_ui_core_LayoutClassMap._instance = new haxe_ui_core_LayoutClassMap();
+		}
+		return haxe_ui_core_LayoutClassMap._instance;
+	}
+	static register(alias,className) {
+		haxe_ui_core_LayoutClassMap.get_instance().registerClassName(StringTools.replace(alias,"layout",""),className);
+		haxe_ui_core_LayoutClassMap.get_instance().registerClassName(alias,className);
+	}
+}
+$hxClasses["haxe.ui.core.LayoutClassMap"] = haxe_ui_core_LayoutClassMap;
+haxe_ui_core_LayoutClassMap.__name__ = "haxe.ui.core.LayoutClassMap";
+haxe_ui_core_LayoutClassMap.__properties__ = {get_instance: "get_instance"};
+Object.assign(haxe_ui_core_LayoutClassMap.prototype, {
+	__class__: haxe_ui_core_LayoutClassMap
+	,_map: null
+});
 class haxe_ui_core_Platform extends haxe_ui_backend_PlatformImpl {
 	constructor() {
 		super();
@@ -20088,6 +22589,17 @@ class haxe_ui_core_Screen extends haxe_ui_backend_ScreenImpl {
 	}
 	_onRootComponentResize(e) {
 		this._refreshStyleComponent(e.target);
+	}
+	invalidateAll() {
+		let _g = 0;
+		let _g1 = this.rootComponents;
+		while(_g < _g1.length) this.invalidateChildren(_g1[_g++]);
+	}
+	invalidateChildren(c) {
+		let _g = 0;
+		let _g1 = c._children == null ? [] : c._children;
+		while(_g < _g1.length) this.invalidateChildren(_g1[_g++]);
+		c.invalidateComponent();
 	}
 	registerEvent(type,listener,priority) {
 		if(priority == null) {
@@ -21095,6 +23607,63 @@ class haxe_ui_focus_FocusManager {
 		}
 		haxe_ui_Toolkit.get_screen().set_focus(value);
 		return this.get_focusInfo().currentFocus;
+	}
+	focusNext() {
+		if(this._views.length == 0) {
+			return null;
+		}
+		let list = [];
+		let currentFocus = this.buildFocusableList(this.get_focusInfo().view,list);
+		let index = -1;
+		if(currentFocus != null) {
+			index = list.indexOf(currentFocus);
+		}
+		let nextIndex = index + 1;
+		if(nextIndex > list.length - 1) {
+			nextIndex = 0;
+		}
+		let nextFocus = list[nextIndex];
+		this.set_focus(nextFocus);
+		return nextFocus;
+	}
+	focusPrev() {
+		if(this._views.length == 0) {
+			return null;
+		}
+		let list = [];
+		let currentFocus = this.buildFocusableList(this.get_focusInfo().view,list);
+		let index = -1;
+		if(currentFocus != null) {
+			index = list.indexOf(currentFocus);
+		}
+		let prevIndex = index - 1;
+		if(prevIndex < 0) {
+			prevIndex = list.length - 1;
+		}
+		let prevFocus = list[prevIndex];
+		this.set_focus(prevFocus);
+		return prevFocus;
+	}
+	buildFocusableList(c,list) {
+		let currentFocus = null;
+		if(js_Boot.__implements(c,haxe_ui_focus_IFocusable)) {
+			let f = c;
+			if(f.get_allowFocus() == true) {
+				if(f.get_focus() == true) {
+					currentFocus = f;
+				}
+				list.push(f);
+			}
+		}
+		let _g = 0;
+		let _g1 = c._children == null ? [] : c._children;
+		while(_g < _g1.length) {
+			let f = this.buildFocusableList(_g1[_g++],list);
+			if(f != null) {
+				currentFocus = f;
+			}
+		}
+		return currentFocus;
 	}
 	static get_instance() {
 		if(haxe_ui_focus_FocusManager._instance == null) {
@@ -22675,6 +25244,18 @@ class haxe_ui_scripting_ScriptInterp extends hscript_Interp {
 		Reflect.setProperty(o,f,v);
 		return v;
 	}
+	static addClassAlias(alias,classPath) {
+		if(haxe_ui_scripting_ScriptInterp._classAliases == null) {
+			haxe_ui_scripting_ScriptInterp._classAliases = new haxe_ds_StringMap();
+		}
+		haxe_ui_scripting_ScriptInterp._classAliases.h[alias] = classPath;
+	}
+	static addStaticClass(alias,c) {
+		if(haxe_ui_scripting_ScriptInterp._staticClasses == null) {
+			haxe_ui_scripting_ScriptInterp._staticClasses = new haxe_ds_StringMap();
+		}
+		haxe_ui_scripting_ScriptInterp._staticClasses.h[alias] = c;
+	}
 }
 $hxClasses["haxe.ui.scripting.ScriptInterp"] = haxe_ui_scripting_ScriptInterp;
 haxe_ui_scripting_ScriptInterp.__name__ = "haxe.ui.scripting.ScriptInterp";
@@ -23807,6 +26388,9 @@ class haxe_ui_styles_StyleSheet {
 	addImport(el) {
 		this._imports.push(el);
 	}
+	get_imports() {
+		return this._imports;
+	}
 	get_rules() {
 		let r = this._rules.slice();
 		let _g = 0;
@@ -23820,6 +26404,15 @@ class haxe_ui_styles_StyleSheet {
 		}
 		return r;
 	}
+	removeAllRules() {
+		this._rules = [];
+	}
+	clear() {
+		this.removeAllRules();
+		this._imports = [];
+		this._mediaQueries = [];
+		this._animations = new haxe_ds_StringMap();
+	}
 	addRule(el) {
 		this._rules.push(el);
 	}
@@ -23828,6 +26421,29 @@ class haxe_ui_styles_StyleSheet {
 	}
 	addAnimation(el) {
 		this._animations.h[el.id] = el;
+	}
+	parse(css) {
+		let ss = new haxe_ui_styles_Parser().parse(css);
+		let f = new haxe_ui_styles_StyleSheet();
+		let _g = 0;
+		let _g1 = ss.get_imports();
+		while(_g < _g1.length) {
+			let i = _g1[_g++];
+			let importCss = haxe_ui_ToolkitAssets.get_instance().getText(i.url);
+			f.merge(new haxe_ui_styles_Parser().parse(importCss));
+		}
+		f.merge(ss);
+		this.merge(f);
+	}
+	merge(styleSheet) {
+		this._imports = this._imports.concat(styleSheet._imports);
+		this._rules = this._rules.concat(styleSheet._rules);
+		this._mediaQueries = this._mediaQueries.concat(styleSheet._mediaQueries);
+		let k = haxe_ds_StringMap.keysIterator(styleSheet._animations.h);
+		while(k.hasNext()) {
+			let k1 = k.next();
+			this._animations.h[k1] = styleSheet._animations.h[k1];
+		}
 	}
 	buildStyleFor(c,style) {
 		if(style == null) {
@@ -23850,12 +26466,14 @@ $hxClasses["haxe.ui.styles.StyleSheet"] = haxe_ui_styles_StyleSheet;
 haxe_ui_styles_StyleSheet.__name__ = "haxe.ui.styles.StyleSheet";
 Object.assign(haxe_ui_styles_StyleSheet.prototype, {
 	__class__: haxe_ui_styles_StyleSheet
+	,name: null
 	,_imports: null
 	,_rules: null
 	,_mediaQueries: null
 	,_animations: null
+	,imports: null
 	,rules: null
-	,__properties__: {get_rules: "get_rules",get_animations: "get_animations"}
+	,__properties__: {get_rules: "get_rules",get_imports: "get_imports",get_animations: "get_animations"}
 });
 var haxe_ui_styles_Value = $hxEnums["haxe.ui.styles.Value"] = { __ename__ : true, __constructs__ : ["VString","VNumber","VBool","VDimension","VColor","VCall","VConstant","VComposite","VTime","VNone"]
 	,VString: ($_=function(v) { return {_hx_index:0,v:v,__enum__:"haxe.ui.styles.Value",toString:$estr}; },$_.__params__ = ["v"],$_)
@@ -25238,6 +27856,87 @@ Object.assign(haxe_ui_styles_elements_SelectorPart.prototype, {
 	,_parts: null
 	,classNameParts: null
 	,__properties__: {get_classNameParts: "get_classNameParts"}
+});
+class haxe_ui_themes_Theme {
+	constructor() {
+		this.styles = [];
+	}
+}
+$hxClasses["haxe.ui.themes.Theme"] = haxe_ui_themes_Theme;
+haxe_ui_themes_Theme.__name__ = "haxe.ui.themes.Theme";
+Object.assign(haxe_ui_themes_Theme.prototype, {
+	__class__: haxe_ui_themes_Theme
+	,parent: null
+	,styles: null
+});
+class haxe_ui_themes_ThemeManager {
+	constructor() {
+		this._themes = new haxe_ds_StringMap();
+	}
+	getTheme(themeName) {
+		let theme = this._themes.h[themeName];
+		if(theme == null) {
+			theme = new haxe_ui_themes_Theme();
+			this._themes.h[themeName] = theme;
+		}
+		return theme;
+	}
+	addStyleResource(themeName,resourceId,priority) {
+		if(priority == null) {
+			priority = 0;
+		}
+		this.getTheme(themeName).styles.push({ resourceId : resourceId, priority : priority});
+	}
+	applyTheme(themeName) {
+		haxe_ui_Toolkit.styleSheet.clear("default");
+		let entries = [];
+		this.buildThemeEntries("global",entries);
+		this.buildThemeEntries(themeName,entries);
+		haxe_ds_ArraySort.sort(entries,function(a,b) {
+			if(a.priority < b.priority) {
+				return -1;
+			} else if(a.priority > b.priority) {
+				return 1;
+			}
+			return 0;
+		});
+		let _g = 0;
+		while(_g < entries.length) this.applyResource(entries[_g++].resourceId);
+	}
+	applyResource(resourceId) {
+		let style = haxe_ui_Toolkit.get_assets().getText(resourceId);
+		if(style != null) {
+			this.addStyleString(style);
+		}
+	}
+	addStyleString(style) {
+		haxe_ui_Toolkit.styleSheet.parse(style);
+	}
+	buildThemeEntries(themeName,arr) {
+		let theme = this._themes.h[themeName];
+		if(theme == null) {
+			return;
+		}
+		if(theme.parent != null) {
+			this.buildThemeEntries(theme.parent,arr);
+		}
+		let _g = 0;
+		let _g1 = theme.styles;
+		while(_g < _g1.length) arr.push(_g1[_g++]);
+	}
+	static get_instance() {
+		if(haxe_ui_themes_ThemeManager._instance == null) {
+			haxe_ui_themes_ThemeManager._instance = new haxe_ui_themes_ThemeManager();
+		}
+		return haxe_ui_themes_ThemeManager._instance;
+	}
+}
+$hxClasses["haxe.ui.themes.ThemeManager"] = haxe_ui_themes_ThemeManager;
+haxe_ui_themes_ThemeManager.__name__ = "haxe.ui.themes.ThemeManager";
+haxe_ui_themes_ThemeManager.__properties__ = {get_instance: "get_instance"};
+Object.assign(haxe_ui_themes_ThemeManager.prototype, {
+	__class__: haxe_ui_themes_ThemeManager
+	,_themes: null
 });
 class haxe_ui_util_CallbackMap {
 	constructor() {
@@ -28272,6 +30971,130 @@ class js_Boot {
 }
 $hxClasses["js.Boot"] = js_Boot;
 js_Boot.__name__ = "js.Boot";
+class lunasurveyor_components_MainView extends haxe_ui_containers_VBox {
+	constructor() {
+		haxe_ui_backend_ComponentSurface._hx_skip_constructor = true;
+		super();
+		haxe_ui_backend_ComponentSurface._hx_skip_constructor = false;
+		this._hx_constructor();
+	}
+	_hx_constructor() {
+		this.debugInfo = new lunasurveyor_components_DebugInfo();
+		this.menu = new lunasurveyor_components_Menu();
+		super._hx_constructor();
+		let c0 = new haxe_ui_containers_VBox();
+		c0.set_id("menuContainer");
+		c0.set_percentWidth(100.);
+		c0.set_styleString("background-color:white;");
+		this.addComponent(c0);
+		let c1 = new haxe_ui_containers_VBox();
+		let c2 = new haxe_ui_components_Label();
+		c2.set_text("Luna Surveyor");
+		c2.set_styleString("color:white;");
+		c2.set_horizontalAlign("center");
+		c1.addComponent(c2);
+		this.addComponent(c1);
+		let c3 = new haxe_ui_containers_VBox();
+		let c4 = new haxe_ui_containers_VBox();
+		c4.set_id("debugInfoContainer");
+		c3.addComponent(c4);
+		let c5 = new haxe_ui_containers_HBox();
+		c5.set_id("horizontalMain");
+		c3.addComponent(c5);
+		this.addComponent(c3);
+		this.set_id("main");
+		this.set_percentWidth(100.);
+		this.set_styleString("background-color:white;");
+		this.bindingRoot = true;
+		this.menuContainer = c0;
+		this.horizontalMain = c5;
+		this.debugInfoContainer = c4;
+		let c = this.menu.hideDebug;
+		if(c != null) {
+			c.registerEvent("click",$bind(this,this.hideDebugTools));
+		} else {
+			haxe_Log.trace("WARNING: could not find component to regsiter event (" + "this.menu.hideDebug" + ")",{ fileName : "haxe/ui/macros/Macros.hx", lineNumber : 259, className : "lunasurveyor.components.MainView", methodName : "new"});
+		}
+		let c6 = this.menu.showDebug;
+		if(c6 != null) {
+			c6.registerEvent("click",$bind(this,this.showDebugTools));
+		} else {
+			haxe_Log.trace("WARNING: could not find component to regsiter event (" + "this.menu.showDebug" + ")",{ fileName : "haxe/ui/macros/Macros.hx", lineNumber : 259, className : "lunasurveyor.components.MainView", methodName : "new"});
+		}
+		this.setupElements();
+	}
+	setupElements() {
+		this.menuContainer.addComponent(this.menu);
+		this.debugInfoContainer.addComponent(this.debugInfo);
+	}
+	showDebugTools(event) {
+		this.debugInfoContainer.show();
+	}
+	hideDebugTools(event) {
+		this.debugInfoContainer.hide();
+	}
+	setEventName(value) {
+		this.debugInfo.eventName.set_value(value);
+	}
+	setEventXCoordinate(value) {
+		this.debugInfo.eventYCoordinate.set_value(value);
+	}
+	setEventYCoordinate(value) {
+		this.debugInfo.eventXCoordinate.set_value(value);
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new lunasurveyor_components_MainView();
+	}
+}
+$hxClasses["lunasurveyor.components.MainView"] = lunasurveyor_components_MainView;
+lunasurveyor_components_MainView.__name__ = "lunasurveyor.components.MainView";
+lunasurveyor_components_MainView.__super__ = haxe_ui_containers_VBox;
+Object.assign(lunasurveyor_components_MainView.prototype, {
+	__class__: lunasurveyor_components_MainView
+	,menu: null
+	,debugInfo: null
+	,menuContainer: null
+	,horizontalMain: null
+	,debugInfoContainer: null
+});
+class lunasurveyor_LunaDebug {
+	static initializeDebug() {
+		haxe_ui_Toolkit.init({ container : window.document.body});
+		let element = window.document.createElement("style");
+		element.textContent = ".haxeui-component {z-Index:150}";
+		window.document.head.appendChild(element);
+		let gameCanvas = window.document.getElementById("ErrorPrinter");
+		window.document.body.insertBefore(lunasurveyor_LunaDebug.mainView.element,gameCanvas);
+		haxe_Log.trace("Added Debug to the current scene.",{ fileName : "src/lunasurveyor/LunaDebug.hx", lineNumber : 25, className : "lunasurveyor.LunaDebug", methodName : "initializeDebug"});
+		lunasurveyor_LunaDebug.setupMouseEvents();
+	}
+	static setupMouseEvents() {
+		window.document.addEventListener("mousedown",function(event) {
+			let mapX = $gameMap.canvasToMapX(event.clientX);
+			let mapY = $gameMap.canvasToMapY(event.clientY);
+			lunasurveyor_LunaDebug.setEventInformation($gameMap.eventsXy(mapX,mapY).shift());
+		},{ passive : false});
+	}
+	static setEventInformation(event) {
+		lunasurveyor_LunaDebug.mainView.setEventName(event.characterName());
+		lunasurveyor_LunaDebug.mainView.setEventXCoordinate(event.x);
+		lunasurveyor_LunaDebug.mainView.setEventYCoordinate(event.y);
+	}
+}
+$hxClasses["lunasurveyor.LunaDebug"] = lunasurveyor_LunaDebug;
+lunasurveyor_LunaDebug.__name__ = "lunasurveyor.LunaDebug";
 class lunasurveyor_Luna_$Surveyor {
 	static main() {
 		/*:
@@ -28280,6 +31103,14 @@ class lunasurveyor_Luna_$Surveyor {
   @plugindesc An extension to the MV/MZ core that allows you to modify the in game ui
   as a UI Kit <Luna_Surveyor>.
    */
+		
+//=============================================================================
+// Setup Events
+//=============================================================================
+      ;
+		lunasurveyor_Luna_$Surveyor.surveyorEmitter.on("setupDebug",function() {
+			lunasurveyor_LunaDebug.initializeDebug();
+		});
 		
 //=============================================================================
 // Base Class Overrides
@@ -28310,6 +31141,161 @@ lunasurveyor_SurveyorSceneBaseExt.__super__ = Scene_Base;
 Object.assign(lunasurveyor_SurveyorSceneBaseExt.prototype, {
 	__class__: lunasurveyor_SurveyorSceneBaseExt
 });
+class lunasurveyor_components_Menu extends haxe_ui_containers_VBox {
+	constructor() {
+		super();
+		let c0 = new haxe_ui_containers_menus_MenuBar();
+		c0.set_percentWidth(100.);
+		c0.set_styleString("background-color:white;");
+		let c1 = new haxe_ui_containers_menus_Menu();
+		c1.set_text("Preferences");
+		let c2 = new haxe_ui_containers_menus_MenuItem();
+		c2.set_id("showDebug");
+		c2.set_text("Show Debug");
+		c1.addComponent(c2);
+		let c3 = new haxe_ui_containers_menus_MenuItem();
+		c3.set_id("hideDebug");
+		c3.set_text("Hide Debug");
+		c1.addComponent(c3);
+		let c4 = new haxe_ui_containers_menus_MenuItem();
+		c4.set_id("enableInteractions");
+		c4.set_text("Enable Interactions");
+		c1.addComponent(c4);
+		let c5 = new haxe_ui_containers_menus_MenuItem();
+		c5.set_id("disableInteractions");
+		c5.set_text("Disable Interactions");
+		c1.addComponent(c5);
+		c0.addComponent(c1);
+		let c6 = new haxe_ui_containers_menus_Menu();
+		c6.set_text("Help");
+		let c7 = new haxe_ui_containers_menus_MenuItem();
+		c7.set_text("Documentation");
+		c6.addComponent(c7);
+		c0.addComponent(c6);
+		this.addComponent(c0);
+		this.set_percentWidth(100.);
+		this.bindingRoot = true;
+		this.showDebug = c2;
+		this.hideDebug = c3;
+		this.enableInteractions = c4;
+		this.disableInteractions = c5;
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new lunasurveyor_components_Menu();
+	}
+}
+$hxClasses["lunasurveyor.components.Menu"] = lunasurveyor_components_Menu;
+lunasurveyor_components_Menu.__name__ = "lunasurveyor.components.Menu";
+lunasurveyor_components_Menu.__super__ = haxe_ui_containers_VBox;
+Object.assign(lunasurveyor_components_Menu.prototype, {
+	__class__: lunasurveyor_components_Menu
+	,showDebug: null
+	,hideDebug: null
+	,enableInteractions: null
+	,disableInteractions: null
+});
+class lunasurveyor_components_DebugInfo extends haxe_ui_containers_VBox {
+	constructor() {
+		super();
+		let c0 = new haxe_ui_containers_properties_PropertyGrid();
+		c0.set_id("infoGrid");
+		c0.set_width(200.);
+		c0.autoHeight = true;
+		let c1 = new haxe_ui_containers_properties_PropertyGroup();
+		c1.set_id("mapGroup");
+		c1.set_text("Map Information");
+		let c2 = new haxe_ui_containers_properties_Property();
+		c2.set_id("mapWidth");
+		c2.set_value(0);
+		c2.set_type("int");
+		c2.set_label("Width");
+		c1.addComponent(c2);
+		let c3 = new haxe_ui_containers_properties_Property();
+		c3.set_id("mapHeight");
+		c3.set_value(0);
+		c3.set_type("int");
+		c3.set_label("Height");
+		c1.addComponent(c3);
+		c0.addComponent(c1);
+		let c4 = new haxe_ui_containers_properties_PropertyGroup();
+		c4.set_id("eventGroup");
+		c4.set_text("Event Information");
+		let c5 = new haxe_ui_containers_properties_Property();
+		c5.set_id("eventName");
+		c5.set_value(null);
+		c5.set_label("Name");
+		c4.addComponent(c5);
+		let c6 = new haxe_ui_containers_properties_Property();
+		c6.set_id("eventXCoordinate");
+		c6.set_value(0);
+		c6.set_type("int");
+		c6.set_label("X");
+		c4.addComponent(c6);
+		let c7 = new haxe_ui_containers_properties_Property();
+		c7.set_id("eventYCoordinate");
+		c7.set_value(0);
+		c7.set_type("int");
+		c7.set_label("Y");
+		c4.addComponent(c7);
+		c0.addComponent(c4);
+		this.addComponent(c0);
+		this.set_styleString("background-color:white;");
+		this.bindingRoot = true;
+		this.mapWidth = c2;
+		this.mapHeight = c3;
+		this.mapGroup = c1;
+		this.infoGrid = c0;
+		this.eventYCoordinate = c7;
+		this.eventXCoordinate = c6;
+		this.eventName = c5;
+		this.eventGroup = c4;
+	}
+	registerBehaviours() {
+		super.registerBehaviours();
+	}
+	cloneComponent() {
+		let c = super.cloneComponent();
+		if((this._children == null ? [] : this._children).length != (c._children == null ? [] : c._children).length) {
+			let _g = 0;
+			let _g1 = this._children == null ? [] : this._children;
+			while(_g < _g1.length) c.addComponent(_g1[_g++].cloneComponent());
+		}
+		return c;
+	}
+	self() {
+		return new lunasurveyor_components_DebugInfo();
+	}
+}
+$hxClasses["lunasurveyor.components.DebugInfo"] = lunasurveyor_components_DebugInfo;
+lunasurveyor_components_DebugInfo.__name__ = "lunasurveyor.components.DebugInfo";
+lunasurveyor_components_DebugInfo.__super__ = haxe_ui_containers_VBox;
+Object.assign(lunasurveyor_components_DebugInfo.prototype, {
+	__class__: lunasurveyor_components_DebugInfo
+	,mapWidth: null
+	,mapHeight: null
+	,mapGroup: null
+	,infoGrid: null
+	,eventYCoordinate: null
+	,eventXCoordinate: null
+	,eventName: null
+	,eventGroup: null
+});
+class _$LTGlobals_$ {
+}
+$hxClasses["_LTGlobals_"] = _$LTGlobals_$;
+__name__ = "_LTGlobals_";
 class utils_Fn {
 	static proto(obj) {
 		return obj.prototype;
@@ -28357,10 +31343,16 @@ haxe_ui_core_Component.__meta__ = { fields : { styleNames : { clonable : null}, 
 haxe_ui_util_GenericConfig.cache = new haxe_ds_StringMap();
 haxe_ui_Toolkit.styleSheet = new haxe_ui_styles_CompositeStyleSheet();
 haxe_ui_Toolkit.nativeConfig = new haxe_ui_util_GenericConfig();
+haxe_ui_Toolkit._theme = "default";
+haxe_ui_Toolkit._backendProperties = new haxe_ui_util_Properties();
+haxe_ui_Toolkit._built = false;
+haxe_ui_Toolkit._backendBuilt = false;
+haxe_ui_Toolkit._initialized = false;
 haxe_ui_Toolkit.pixelsPerRem = 16;
 haxe_ui_Toolkit.autoScale = true;
 haxe_ui_Toolkit._scaleX = 0;
 haxe_ui_Toolkit._scaleY = 0;
+haxe_ui_backend_AssetsBase._hx_skip_constructor = false;
 haxe_ui_backend_ImageSurface._hx_skip_constructor = false;
 haxe_ui_backend_PlatformImpl._vscrollWidth = -1;
 haxe_ui_backend_PlatformImpl._hscrollHeight = -1;
@@ -28458,6 +31450,7 @@ haxe_ui_styles_ValueTools.colors = (function($this) {
 }(this));
 haxe_ui_styles_animation_AnimationOptions.DEFAULT_EASING_FUNCTION = haxe_ui_styles_EasingFunction.EASE;
 haxe_ui_util_StyleUtil.style2ComponentEReg = new EReg("-(\\w)","g");
+lunasurveyor_LunaDebug.mainView = new lunasurveyor_components_MainView();
 lunasurveyor_Luna_$Surveyor.surveyorEmitter = new PIXI.utils.EventEmitter();
 lunasurveyor_Luna_$Surveyor.main();
 })(typeof window != "undefined" ? window : typeof global != "undefined" ? global : typeof self != "undefined" ? self : this);

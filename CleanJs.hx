@@ -56,7 +56,9 @@ class CleanJs {
       ~/(?<!")\\n(?!")/g.replace(_, "\n"),
       ~/(?<=")\\n(?!")/g.replace(_,
        "\n"), // Below Special Removal Of Characters by appending them with @ symbols
-      ~/@"|"@/gi.replace(_, ""), ~/@(.*)@/gi.replace(_, "$1"));
+      ~/@"|"@/gi.replace(_, ""), ~/@(.*)@/gi.replace(_, "$1"),
+      (~/_LTGlobals_\./gi).replace(_, ""),
+      (~/_\$LTGlobals_\$\./gi).replace(_, ""));
     }
    }).join("\n");
 

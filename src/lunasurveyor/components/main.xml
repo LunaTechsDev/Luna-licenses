@@ -4,12 +4,11 @@
   </vbox>
 
   <vbox>
-    <label text="Helios" horizontalAlign="center" style="color:white;" />
+    <label text="Luna Surveyor" horizontalAlign="center" style="color:white;" />
   </vbox>
   <!--  Main Container-->
   <vbox>
-    <vbox id="winInfoContainer"></vbox>
-    <vbox id="winListContainer"></vbox>
+    <vbox id="debugInfoContainer"></vbox>
     <hbox id="horizontalMain"></hbox>
   </vbox>
 </vbox>
