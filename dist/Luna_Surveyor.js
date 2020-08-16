@@ -2,7 +2,7 @@
 // Luna_Surveyor.js
 //=============================================================================
 //=============================================================================
-// Build Date: 2020-08-16 16:29:51
+// Build Date: 2020-08-16 16:51:31
 //=============================================================================
 //=============================================================================
 // Made with LunaTea -- Haxe
@@ -28285,10 +28285,38 @@ class lunasurveyor_Luna_$Surveyor {
 // Base Class Overrides
 //=============================================================================
       ;
+		Scene_Base = lunasurveyor_SurveyorSceneBaseExt;
+	}
+	static setupDebugTool() {
+		haxe_Timer.delay(function() {
+			lunasurveyor_Luna_$Surveyor.surveyorEmitter.emit("setupDebug");
+		},1500);
 	}
 }
 $hxClasses["lunasurveyor.Luna_Surveyor"] = lunasurveyor_Luna_$Surveyor;
 lunasurveyor_Luna_$Surveyor.__name__ = "lunasurveyor.Luna_Surveyor";
+class lunasurveyor_SurveyorSceneBaseExt extends Scene_Base {
+	constructor() {
+		super();
+	}
+	create() {
+		super.create();
+		lunasurveyor_Luna_$Surveyor.setupDebugTool();
+	}
+}
+$hxClasses["lunasurveyor.SurveyorSceneBaseExt"] = lunasurveyor_SurveyorSceneBaseExt;
+lunasurveyor_SurveyorSceneBaseExt.__name__ = "lunasurveyor.SurveyorSceneBaseExt";
+lunasurveyor_SurveyorSceneBaseExt.__super__ = Scene_Base;
+Object.assign(lunasurveyor_SurveyorSceneBaseExt.prototype, {
+	__class__: lunasurveyor_SurveyorSceneBaseExt
+});
+class utils_Fn {
+	static proto(obj) {
+		return obj.prototype;
+	}
+}
+$hxClasses["utils.Fn"] = utils_Fn;
+utils_Fn.__name__ = "utils.Fn";
 function $getIterator(o) { if( o instanceof Array ) return new haxe_iterators_ArrayIterator(o); else return o.iterator(); }
 function $bind(o,m) { if( m == null ) return null; if( m.__id__ == null ) m.__id__ = $global.$haxeUID++; var f; if( o.hx__closures__ == null ) o.hx__closures__ = {}; else f = o.hx__closures__[m.__id__]; if( f == null ) { f = m.bind(o); o.hx__closures__[m.__id__] = f; } return f; }
 $global.$haxeUID |= 0;
@@ -28430,5 +28458,6 @@ haxe_ui_styles_ValueTools.colors = (function($this) {
 }(this));
 haxe_ui_styles_animation_AnimationOptions.DEFAULT_EASING_FUNCTION = haxe_ui_styles_EasingFunction.EASE;
 haxe_ui_util_StyleUtil.style2ComponentEReg = new EReg("-(\\w)","g");
+lunasurveyor_Luna_$Surveyor.surveyorEmitter = new PIXI.utils.EventEmitter();
 lunasurveyor_Luna_$Surveyor.main();
 })(typeof window != "undefined" ? window : typeof global != "undefined" ? global : typeof self != "undefined" ? self : this);

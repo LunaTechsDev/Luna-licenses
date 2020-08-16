@@ -1,0 +1,15 @@
+<vbox id="main" width="100%" style="background-color:white;">
+  <!-- Menu Bar-->
+  <vbox id="menuContainer" width="100%" style="background-color:white;">
+  </vbox>
+
+  <vbox>
+    <label text="Helios" horizontalAlign="center" style="color:white;" />
+  </vbox>
+  <!--  Main Container-->
+  <vbox>
+    <vbox id="winInfoContainer"></vbox>
+    <vbox id="winListContainer"></vbox>
+    <hbox id="horizontalMain"></hbox>
+  </vbox>
+</vbox>

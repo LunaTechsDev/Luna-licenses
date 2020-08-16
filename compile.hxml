@@ -1,4 +1,6 @@
 -lib LunaTea
+-lib haxeui-core
+-lib haxeui-html5
 
 -cp src
 # JS Version 
