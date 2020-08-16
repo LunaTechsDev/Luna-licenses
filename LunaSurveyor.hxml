@@ -1,0 +1,5 @@
+-lib haxeui-core
+-lib haxeui-html5
+
+-js dist/Luna_Surveyor.js
+-main lunasurveyor.Luna_Surveyor

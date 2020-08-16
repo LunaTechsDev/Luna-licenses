@@ -30,4 +30,7 @@
 -js dist/TestPlugin.js
 -main TestPlugin
 
---cmd haxe -D gamePath=games/YourProject --run CleanJs
+--next
+LunaSurveyor.hxml
+
+--cmd haxe -D gamePath=games/KinoCreates --run CleanJs
