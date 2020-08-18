@@ -15,7 +15,7 @@ class TestPlugin {
  public static function main() {
   trace(Sprite_Base);
   // Plugin parameters can be include here as an internal call.
-  MacroTools.includeJsLib("./TestPluginParams.js");
+  // MacroTools.includeJsLib("./src/TestPluginParams.js");
 
   var parameters: Any = PluginManager.parameters("TestPlugin");
   textSpeed = Fn.getByArrSyntax(parameters, "Text Speed");

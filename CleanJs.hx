@@ -53,7 +53,7 @@ class CleanJs {
     } else {
      pipe( // Below Removes Semi Colons Per Lin
       ~/(\*\/);/g.replace(lineContent, "$1"), ~/(==);/g.replace(_, "$1"),
-      ~/;\(/g.replace(_, ""),
+      ~/;(\()/g.replace(_, "$1"), ~/;(\/*)/g.replace(_, "$1"),
       ~/(\/\/.+\s*);/g.replace(_,
        "$1"), // Below Removes New Line Characters from the output file
       ~/(?<!")\\n(?!")/g.replace(_, "\n"),

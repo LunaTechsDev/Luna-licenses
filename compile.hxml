@@ -29,6 +29,7 @@
 
 --next
 -js dist/TestPlugin.js
+# You can include plugin parameters as a macro in your compile.hxml
 --macro macros.MacroTools.includeJsLib("./src/TestPluginParams.js")
 -main TestPlugin
 

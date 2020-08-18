@@ -2,7 +2,7 @@
 // TestPlugin.js
 //=============================================================================
 //=============================================================================
-// Build Date: 2020-08-17 22:06:11
+// Build Date: 2020-08-17 22:15:54
 //=============================================================================
 //=============================================================================
 // Made with LunaTea -- Haxe
@@ -38,97 +38,95 @@ Instructions:
 You set your text speed in the plugin menu.
 This is the speed that the characters will be drawn at.
 
-Contact me via forums; username: Kino.
+Contact me via forums username: Kino.
 Hope this plugin helps and enjoy!
 */
-function ($global) { "use strict";
+/*:
+@author Test
+@plugindesc An extension to the core Message Window functionality
+to support Visual Novels <TestPlugin>.
+
+@param Text Speed 
+@desc The speed at which characters will be rendered
+@default 2
+
+@help
+Version: 1.00
+Version Log:
+Now you can change the text speed at will using escape characters
+inside the window.
+Example: \\TS[30] updates the text speed to super slow 30.
+Note: The [30] will appear in the editor, but not in game.
+
+Instructions:
+You set your text speed in the plugin menu.
+This is the speed that the characters will be drawn at.
+
+Contact me via forums username: Kino.
+Hope this plugin helps and enjoy!
+*/
+(function ($global) { "use strict"
 var $estr = function() { return js_Boot.__string_rec(this,''); },$hxEnums = $hxEnums || {};
-Math.__name__ = true;
+Math.__name__ = true
 class TestPlugin {
 	static main() {
-		console.log("src/TestPlugin.hx:16:",Sprite_Base);
-		/*:
-     
-   @author Test
-   @plugindesc An extension to the core Message Window functionality
-   to support Visual Novels <TestPlugin>.
-
-   @param Text Speed 
-   @desc The speed at which characters will be rendered
-   @default 2
-   
-   @help
-   Version: 1.00
-   Version Log:
-   Now you can change the text speed at will using escape characters
-   inside the window.
-   Example: \\TS[30] updates the text speed to super slow 30.
-   Note: The [30] will appear in the editor, but not in game.
-
-   Instructions:
-   You set your text speed in the plugin menu.
-   This is the speed that the characters will be drawn at.
-
-   Contact me via forums; username: Kino.
-   Hope this plugin helps and enjoy!
-   
-   */
-		TestPlugin.textSpeed = PluginManager.parameters("TestPlugin")["Text Speed"];
-		console.log("src/TestPlugin.hx:45:",TestPlugin.textSpeed);
-		Window_Message = MessageWinNew;
+		console.log("src/TestPlugin.hx:16:",Sprite_Base)
+		TestPlugin.textSpeed = PluginManager.parameters("TestPlugin")["Text Speed"]
+		console.log("src/TestPlugin.hx:22:",TestPlugin.textSpeed)
+		Window_Message = MessageWinNew
 	}
 }
-TestPlugin.__name__ = true;
+TestPlugin.__name__ = true
 class MessageWinNew extends Window_Message {
 	constructor(x,y,width,height) {
-		super(x,y,width,height);
-		this.originalTextSpeed = TestPlugin.textSpeed;
-		this.activeTextSpeed = TestPlugin.textSpeed;
+		super(x,y,width,height)
+		this.originalTextSpeed = TestPlugin.textSpeed
+		this.activeTextSpeed = TestPlugin.textSpeed
 	}
 	updateTextSpeed(value) {
-		this.activeTextSpeed = value;
+		this.activeTextSpeed = value
 	}
 	processEscapeCharacter(code,textState) {
 		switch(code) {
 		case "!":
-			this.startPause();
-			break;
+			this.startPause()
+			break
 		case "$":
-			this._goldWindow.open();
-			break;
+			this._goldWindow.open()
+			break
 		case ".":
-			this.startWait(15);
-			break;
+			this.startWait(15)
+			break
 		case "<":
-			this._lineShowFast = false;
-			break;
+			this._lineShowFast = false
+			break
 		case ">":
-			this._lineShowFast = true;
-			break;
+			this._lineShowFast = true
+			break
 		case "TS":
-			this.updateTextSpeed(this.obtainEscapeParam(textState) | 0);
-			break;
+			this.updateTextSpeed(this.obtainEscapeParam(textState) | 0)
+			break
 		case "^":
-			this._pauseSkip = true;
-			break;
+			this._pauseSkip = true
+			break
 		default:
-			super.processEscapeCharacter(code,textState);
+			super.processEscapeCharacter(code,textState)
 		}
 	}
 	processNormalCharacter(textState) {
-		super.processNormalCharacter(textState);
-		this.startWait(this.activeTextSpeed);
+		super.processNormalCharacter(textState)
+		this.startWait(this.activeTextSpeed)
 	}
 	terminateMessage() {
-		this.activeTextSpeed = this.originalTextSpeed;
-		super.terminateMessage();
+		this.activeTextSpeed = this.originalTextSpeed
+		super.terminateMessage()
 	}
 }
-MessageWinNew.__name__ = true;
+MessageWinNew.__name__ = true
 class haxe_iterators_ArrayIterator {
 	constructor(array) {
-		this.current = 0;
-		this.array = array;
+		this.current = 0
+		this.array = array
 	}
 	hasNext() {
 		return this.current < this.array.length;
@@ -137,7 +135,7 @@ class haxe_iterators_ArrayIterator {
 		return this.array[this.current++];
 	}
 }
-haxe_iterators_ArrayIterator.__name__ = true;
+haxe_iterators_ArrayIterator.__name__ = true
 class js_Boot {
 	static __string_rec(o,s) {
 		if(o == null) {
@@ -146,83 +144,83 @@ class js_Boot {
 		if(s.length >= 5) {
 			return "<...>";
 		}
-		let t = typeof(o);
+		let t = typeof(o)
 		if(t == "function" && (o.__name__ || o.__ename__)) {
-			t = "object";
+			t = "object"
 		}
 		switch(t) {
 		case "function":
 			return "<function>";
 		case "object":
 			if(o.__enum__) {
-				let e = $hxEnums[o.__enum__];
-				let n = e.__constructs__[o._hx_index];
-				let con = e[n];
+				let e = $hxEnums[o.__enum__]
+				let n = e.__constructs__[o._hx_index]
+				let con = e[n]
 				if(con.__params__) {
-					s = s + "\t";
+					s = s + "\t"
 					return n + "(" + ((function($this) {
-						var $r;
-						let _g = [];
+						var $r
+						let _g = []
 						{
-							let _g1 = 0;
-							let _g2 = con.__params__;
+							let _g1 = 0
+							let _g2 = con.__params__
 							while(true) {
 								if(!(_g1 < _g2.length)) {
-									break;
+									break
 								}
-								let p = _g2[_g1];
-								_g1 = _g1 + 1;
-								_g.push(js_Boot.__string_rec(o[p],s));
+								let p = _g2[_g1]
+								_g1 = _g1 + 1
+								_g.push(js_Boot.__string_rec(o[p],s))
 							}
 						}
-						$r = _g;
+						$r = _g
 						return $r;
-					}(this))).join(",") + ")";
+					}(this))).join(",") + ")"
 				} else {
 					return n;
 				}
 			}
 			if(((o) instanceof Array)) {
-				let str = "[";
+				let str = "["
 				s += "\t";
-				let _g = 0;
-				let _g1 = o.length;
+				let _g = 0
+				let _g1 = o.length
 				while(_g < _g1) {
-					let i = _g++;
+					let i = _g++
 					str += (i > 0 ? "," : "") + js_Boot.__string_rec(o[i],s);
 				}
 				str += "]";
 				return str;
 			}
-			let tostr;
+			let tostr
 			try {
-				tostr = o.toString;
+				tostr = o.toString
 			} catch( _g ) {
 				return "???";
 			}
 			if(tostr != null && tostr != Object.toString && typeof(tostr) == "function") {
-				let s2 = o.toString();
+				let s2 = o.toString()
 				if(s2 != "[object Object]") {
 					return s2;
 				}
 			}
-			let str = "{\n";
+			let str = "{\n"
 			s += "\t";
-			let hasp = o.hasOwnProperty != null;
-			let k = null;
+			let hasp = o.hasOwnProperty != null
+			let k = null
 			for( k in o ) {
 			if(hasp && !o.hasOwnProperty(k)) {
-				continue;
+				continue
 			}
 			if(k == "prototype" || k == "__class__" || k == "__super__" || k == "__interfaces__" || k == "__properties__") {
-				continue;
+				continue
 			}
 			if(str.length != 2) {
 				str += ", \n";
 			}
 			str += s + k + " : " + js_Boot.__string_rec(o[k],s);
 			}
-			s = s.substring(1);
+			s = s.substring(1)
 			str += "\n" + s + "}";
 			return str;
 		case "string":
@@ -232,16 +230,16 @@ class js_Boot {
 		}
 	}
 }
-js_Boot.__name__ = true;
+js_Boot.__name__ = true
 class utils_Fn {
 	static proto(obj) {
 		return obj.prototype;
 	}
 }
-utils_Fn.__name__ = true;
-String.__name__ = true;
-Array.__name__ = true;
-js_Boot.__toStr = ({ }).toString;
-TestPlugin.textSpeed = 2;
-TestPlugin.main();
-})({});
+utils_Fn.__name__ = true
+String.__name__ = true
+Array.__name__ = true
+js_Boot.__toStr = ({ }).toString
+TestPlugin.textSpeed = 2
+TestPlugin.main()
+})({})
