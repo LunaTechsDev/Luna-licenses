@@ -1,9 +1,23 @@
 # Autocompletion .hxml for all your haxe libraries and packages.
 -lib LunaTea
+-lib hxnodejs
 -lib haxeui-core
 -lib haxeui-html5
 
 -cp src
 
+# JS Version
+-D js-es=6
+
 # RM Version for Conditional Compilation
-# -D compileMV
+-D compileMV
+
+-dce full
+
+--no-output
+--each
+
+# Place the plugins you want evaluated in this list
+--next
+-js dist/TestPlugin.js
+-main TestPlugin
