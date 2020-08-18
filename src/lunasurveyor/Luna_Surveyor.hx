@@ -15,11 +15,6 @@ class Luna_Surveyor {
  public static var surveyorEmitter = Amaryllis.createEventEmitter();
 
  public static function main() {
-  Comment.pluginParams("
-  @author Kino
-  @plugindesc An extension to the MV/MZ core that allows you to modify the in game ui
-  as a UI Kit <Luna_Surveyor>.");
-
   Comment.title("Setup Events");
   surveyorEmitter.on(SCustomEvents.SETUP_DEBUG, () -> {
    LunaDebug.initializeDebug();

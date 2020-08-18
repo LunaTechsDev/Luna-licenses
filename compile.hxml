@@ -33,6 +33,7 @@
 --macro macros.MacroTools.includeJsLib("./src/TestPluginParams.js")
 -main TestPlugin
 
+# You can also include other compiler .hxmls in your main compilation
 --next
 LunaSurveyor.hxml
 
