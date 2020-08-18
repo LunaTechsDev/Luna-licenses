@@ -1,0 +1,9 @@
+# Autocompletion .hxml for all your haxe libraries and packages.
+-lib LunaTea
+-lib haxeui-core
+-lib haxeui-html5
+
+-cp src
+
+# RM Version for Conditional Compilation
+# -D compileMV

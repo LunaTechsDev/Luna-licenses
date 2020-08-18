@@ -1,6 +1,5 @@
 -lib LunaTea
--lib haxeui-core
--lib haxeui-html5
+-lib hxnodejs
 
 -cp src
 # JS Version 
@@ -30,6 +29,7 @@
 
 --next
 -js dist/TestPlugin.js
+--macro macros.MacroTools.includeJsLib("./src/TestPluginParams.js")
 -main TestPlugin
 
 --next

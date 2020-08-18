@@ -8,6 +8,7 @@ import core.Amaryllis;
 import utils.Fn;
 import mz.scenes.Scene_Base;
 import utils.Comment;
+import macros.MacroTools;
 
 @:nullSafety(Strict)
 class Luna_Surveyor {

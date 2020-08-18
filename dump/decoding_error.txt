@@ -1,0 +1,7 @@
+{
+	expr: EThrow({
+		expr: EConst(CString(Fail to find file, DoubleQuotes))
+		pos: #pos
+	})
+	pos: #pos
+}
