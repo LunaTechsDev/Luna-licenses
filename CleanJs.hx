@@ -20,7 +20,11 @@ class CleanJs {
 
  static macro function generatePluginGamePath(): ExprOf<String> {
   var gamePath = Context.definedValue("gamePath");
-  return macro $v{gamePath + "/js/plugins/"}
+  if (gamePath.length < 1) {
+   return macro $v{gamePath + "/js/plugins/"};
+  } else {
+   return macro $v{""};
+  }
  }
 
  public static function main() {
@@ -71,7 +75,10 @@ class CleanJs {
     + "\n"
     + cleanContents;
    File.write(filePath).writeString(newContent);
-   File.write(generatePluginGamePath() + file).writeString(newContent);
+   var gamePath: String = generatePluginGamePath();
+   if (gamePath.length > 0) {
+    File.write(generatePluginGamePath() + file).writeString(newContent);
+   }
    trace("Cleaned Output File: " + filePath);
   });
  }
