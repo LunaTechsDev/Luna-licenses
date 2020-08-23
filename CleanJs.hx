@@ -52,7 +52,8 @@ class CleanJs {
      || (lineContent.contains("if(") && !lineContent.contains("_$LTGlobals_$"))
      || lineContent.contains("#haxeui")
      || lineContent.contains("haxe_ui")
-     || lineContent.contains("return")) {
+     || lineContent.contains("return")
+     && !lineContent.contains("_$LTGlobals_$")) {
      return lineContent;
     } else {
      pipe( // Below Removes Semi Colons Per Lin
