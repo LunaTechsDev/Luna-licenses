@@ -1,6 +1,0 @@
--lib haxeui-core
--lib haxeui-html5
-
--js dist/Luna_Surveyor.js
---macro macros.MacroTools.includeJsLib("src/lunasurveyor/LunaParams.js")
--main lunasurveyor.Luna_Surveyor
