@@ -2,7 +2,7 @@
 // Luna_SkipTitle.js
 //=============================================================================
 //=============================================================================
-// Build Date: 2020-08-29 18:43:53
+// Build Date: 2020-08-29 18:55:59
 //=============================================================================
 //=============================================================================
 // Made with LunaTea -- Haxe
@@ -40,6 +40,7 @@ class LunaSkipTitle {
 		let oldsceneTitleStart = Scene_Title.prototype["start"] 
 		Scene_Title.prototype["start"] = function() {
 			oldsceneTitleStart.call(this)
+			AudioManager.stopAll()
 			SceneManager.goto(Scene_Map)
 		}
 	}
