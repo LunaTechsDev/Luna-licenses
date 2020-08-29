@@ -2,7 +2,7 @@
 // Luna_SkipTitle.js
 //=============================================================================
 //=============================================================================
-// Build Date: 2020-08-29 18:55:59
+// Build Date: 2020-08-29 19:14:24
 //=============================================================================
 //=============================================================================
 // Made with LunaTea -- Haxe
@@ -15,6 +15,10 @@
 @plugindesc Skips the title screen for testing during the development
 process <LunaSkipTitle>.
 @target MV MZ
+
+@help
+
+This plugin requires no modifications to the plugin to work.
 
 MIT License
 Copyright (c) 2020 LunaTechsDev

@@ -4,6 +4,10 @@
 process <LunaSkipTitle>.
 @target MV MZ
 
+@help
+
+This plugin requires no modifications to the plugin to work.
+
 MIT License
 Copyright (c) 2020 LunaTechsDev
 Permission is hereby granted, free of charge, to any person obtaining a copy
