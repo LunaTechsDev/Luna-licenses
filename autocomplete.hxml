@@ -14,7 +14,7 @@
 
 --no-output
 # --macro macros.MacroTools.includeJsLib("./src/LunaSkipTitleParams.js")
--main LunaSkipTitle
+-main LunaLicenses
 --each
 
 # Place the plugins you want evaluated in this list
@@ -22,8 +22,8 @@
 --each
 
 --next
--js dist/Luna_SkipTitle.js
+-js dist/Luna_Licenses.js
 # You can include plugin parameters as a macro in your compile.hxml
 --next
 -D compileMV
--js dist/Luna_SkipTitleMV.jn
+-js dist/Luna_LicensesMV.jn

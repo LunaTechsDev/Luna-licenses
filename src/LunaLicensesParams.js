@@ -1,12 +1,22 @@
 /*:
 @author LunaTechs - Kino
-@plugindesc Skips the title screen for testing during the development
-process <LunaSkipTitle>.
+@plugindesc Allows you to display all the licenses that have been associated
+with your game on the title screen.
+process <LunaLicenses>.
+
 @target MV MZ
 
-@help
+@param CommandName
+@text Command Name
+@default Licenses
+@type text
 
-This plugin requires no modifications to the plugin to work.
+
+@help
+This plugin allows you to display the license information
+from a text file in the directory of your project.
+
+
 
 MIT License
 Copyright (c) 2020 LunaTechsDev
