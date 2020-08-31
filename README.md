@@ -1,5 +1,4 @@
-# Luna Skip Title
+# Luna Licenses
 ### Author LunaTechs - Kino
-> A Plugin that lets you skip the title screen for testing during the development
-process.
+> A Plugin that lets you add licensing information to your title screen.
 > For MV/MZ
