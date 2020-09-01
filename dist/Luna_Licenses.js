@@ -2,7 +2,7 @@
 // Luna_Licenses.js
 //=============================================================================
 //=============================================================================
-// Build Date: 2020-08-31 21:23:03
+// Build Date: 2020-08-31 21:42:59
 //=============================================================================
 //=============================================================================
 // Made with LunaTea -- Haxe
@@ -79,9 +79,9 @@ class LunaLicenses {
 		LunaLicenses.commandName = _g[0].parameters["CommandName"]
 		let textInformation = ""
 		core_Amaryllis.loadData(encodeURIComponent("/licenses.txt").replace(/%2F/g, "/"),"text").then(function(result) {
-			console.log("src/LunaLicenses.hx:22:",result)
+			console.log("src/LunaLicenses.hx:27:",result)
 			textInformation = result
-			return textInformation;
+			return LunaLicenses.licenseText = result;
 		})
 		Window_TitleCommand = LTWindowTitleCommand
 	}
@@ -97,10 +97,34 @@ class LTWindowTitleCommand extends Window_TitleCommand {
 		this.setHandler("license",$bind(this,this.handleLicenseCommand))
 	}
 	handleLicenseCommand() {
-		console.log("src/LunaLicenses.hx:50:","Handle License Command")
+		console.log("src/LunaLicenses.hx:56:","Handle License Command")
+		SceneManager.push(LTSceneLicenses)
 	}
 }
 LTWindowTitleCommand.__name__ = true
+class LTSceneLicenses extends Scene_Base {
+	constructor() {
+		super()
+	}
+	create() {
+		super.create()
+		this.createLicenseWindow()
+	}
+	start() {
+		super.start()
+		this.startText(LunaLicenses.licenseText)
+	}
+	createLicenseWindow() {
+		this._licenseWindow = new Window_ScrollText(new Rectangle(0,0,300,400))
+		this.addWindow(this._licenseWindow)
+	}
+	startText(text) {
+		$gameMessage.add(text)
+		$gameMessage.setScroll(3,true)
+		this._licenseWindow.startMessage()
+	}
+}
+LTSceneLicenses.__name__ = true
 Math.__name__ = true
 class core_Amaryllis {
 	static loadData(url,responseType) {
@@ -244,5 +268,6 @@ String.__name__ = true
 Array.__name__ = true
 js_Boot.__toStr = ({ }).toString
 LunaLicenses.commandName = ""
+LunaLicenses.licenseText = ""
 LunaLicenses.main()
 })(typeof exports != "undefined" ? exports : typeof window != "undefined" ? window : typeof self != "undefined" ? self : this, typeof window != "undefined" ? window : typeof global != "undefined" ? global : typeof self != "undefined" ? self : this)
