@@ -1,3 +1,5 @@
+import rm.core.TouchInput;
+import rm.core.Input;
 import rm.windows.Window_Help;
 import rm.abstracts.windows.WindowHelp;
 import rm.core.Graphics;
@@ -92,5 +94,12 @@ class LTSceneLicenses extends Scene_Base {
   Globals.GameMessage.setScroll(3, true);
   this._licenseWindow.setBackgroundType(0);
   this._licenseWindow.startMessage();
+ }
+
+ public override function update() {
+  super.update();
+  if (Input.isTriggered("cancel") || TouchInput.isCancelled()) {
+   this.popScene();
+  }
  }
 }

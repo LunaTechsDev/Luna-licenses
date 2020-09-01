@@ -2,7 +2,7 @@
 // Luna_LicensesMV.js
 //=============================================================================
 //=============================================================================
-// Build Date: 2020-09-01 18:56:02
+// Build Date: 2020-09-01 19:00:32
 //=============================================================================
 //=============================================================================
 // Made with LunaTea -- Haxe
@@ -83,7 +83,7 @@ class LunaLicenses {
 		LunaLicenses.commandName = params["CommandName"]
 		LunaLicenses.scrollSpeed = parseInt(params["ScrollSpeed"],10)
 		core_Amaryllis.loadData(encodeURIComponent("/licenses.txt").replace(/%2F/g, "/"),"text").then(function(result) {
-			console.log("src/LunaLicenses.hx:27:",result)
+			console.log("src/LunaLicenses.hx:29:",result)
 			return LunaLicenses.licenseText = result;
 		})
 		Window_TitleCommand = LTWindowTitleCommand
@@ -100,7 +100,7 @@ class LTWindowTitleCommand extends Window_TitleCommand {
 		this.setHandler("license",$bind(this,this.handleLicenseCommand))
 	}
 	handleLicenseCommand() {
-		console.log("src/LunaLicenses.hx:55:","Handle License Command")
+		console.log("src/LunaLicenses.hx:57:","Handle License Command")
 		SceneManager.push(LTSceneLicenses)
 	}
 }
@@ -133,6 +133,12 @@ class LTSceneLicenses extends Scene_Base {
 		$gameMessage.setScroll(3,true)
 		this._licenseWindow.setBackgroundType(0)
 		this._licenseWindow.startMessage()
+	}
+	update() {
+		super.update()
+		if(Input.isTriggered("cancel") || TouchInput.isCancelled()) {
+			this.popScene()
+		}
 	}
 }
 LTSceneLicenses.__name__ = true
