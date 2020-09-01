@@ -1,3 +1,5 @@
+import rm.core.Rectangle;
+import core.Amaryllis;
 import rm.Globals;
 import rm.windows.Window_TitleCommand;
 import rm.managers.AudioManager;
@@ -14,7 +16,13 @@ class LunaLicenses {
   var params = Globals.Plugins.filter((plugin) -> {
    return ~/<LunaLicenses>/ig.match(plugin.description);
   })[0].parameters;
-  var commandName: String = params["CommandName"];
+  commandName = params["CommandName"];
+  var textInformation = "";
+  Amaryllis.loadText("/licenses.txt").then((result) -> {
+   trace(result);
+   textInformation = result;
+  });
+  final textContent = "";
   var winTitleCommand = Fn.renameClass(Window_TitleCommand,
    LTWindowTitleCommand);
  }
@@ -22,6 +30,16 @@ class LunaLicenses {
 
 @:keep
 class LTWindowTitleCommand extends Window_TitleCommand {
+ #if compileMV
+ public function new(x: Int, y: Int) {
+  super(x, y);
+ }
+ #else
+ public function new(rect: Rectangle) {
+  super(rect);
+ }
+ #end
+
  public override function makeCommandList() {
   super.makeCommandList();
   this.addCommand(LunaLicenses.commandName, "license", true);
