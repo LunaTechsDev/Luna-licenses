@@ -11,6 +11,9 @@ process <LunaLicenses>.
 @default Licenses
 @type text
 
+@param ScrollSpeed
+@text Scroll Speed
+@default 3
 
 @help
 This plugin allows you to display the license information

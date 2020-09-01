@@ -2,7 +2,7 @@
 // Luna_Licenses.js
 //=============================================================================
 //=============================================================================
-// Build Date: 2020-08-31 21:42:59
+// Build Date: 2020-09-01 18:56:02
 //=============================================================================
 //=============================================================================
 // Made with LunaTea -- Haxe
@@ -23,6 +23,9 @@ process <LunaLicenses>.
 @default Licenses
 @type text
 
+@param ScrollSpeed
+@text Scroll Speed
+@default 3
 
 @help
 This plugin allows you to display the license information
@@ -76,11 +79,11 @@ class LunaLicenses {
 				_g.push(v)
 			}
 		}
-		LunaLicenses.commandName = _g[0].parameters["CommandName"]
-		let textInformation = ""
+		let params = _g[0].parameters
+		LunaLicenses.commandName = params["CommandName"]
+		LunaLicenses.scrollSpeed = parseInt(params["ScrollSpeed"],10)
 		core_Amaryllis.loadData(encodeURIComponent("/licenses.txt").replace(/%2F/g, "/"),"text").then(function(result) {
 			console.log("src/LunaLicenses.hx:27:",result)
-			textInformation = result
 			return LunaLicenses.licenseText = result;
 		})
 		Window_TitleCommand = LTWindowTitleCommand
@@ -97,7 +100,7 @@ class LTWindowTitleCommand extends Window_TitleCommand {
 		this.setHandler("license",$bind(this,this.handleLicenseCommand))
 	}
 	handleLicenseCommand() {
-		console.log("src/LunaLicenses.hx:56:","Handle License Command")
+		console.log("src/LunaLicenses.hx:55:","Handle License Command")
 		SceneManager.push(LTSceneLicenses)
 	}
 }
@@ -108,19 +111,28 @@ class LTSceneLicenses extends Scene_Base {
 	}
 	create() {
 		super.create()
+		this.createWindowLayer()
+		this.createLicenseHelpWindow()
 		this.createLicenseWindow()
 	}
 	start() {
 		super.start()
 		this.startText(LunaLicenses.licenseText)
 	}
+	createLicenseHelpWindow() {
+		this._helpWindow = new Window_Help(new Rectangle(0,0,Graphics.boxWidth,75))
+		this._helpWindow.setText(LunaLicenses.commandName)
+		this.addWindow(this._helpWindow)
+	}
 	createLicenseWindow() {
-		this._licenseWindow = new Window_ScrollText(new Rectangle(0,0,300,400))
+		let yOffset = this._helpWindow.height
+		this._licenseWindow = new Window_ScrollText(new Rectangle(0,yOffset,Graphics.boxWidth,Graphics.boxHeight - yOffset))
 		this.addWindow(this._licenseWindow)
 	}
 	startText(text) {
 		$gameMessage.add(text)
 		$gameMessage.setScroll(3,true)
+		this._licenseWindow.setBackgroundType(0)
 		this._licenseWindow.startMessage()
 	}
 }
@@ -268,6 +280,7 @@ String.__name__ = true
 Array.__name__ = true
 js_Boot.__toStr = ({ }).toString
 LunaLicenses.commandName = ""
+LunaLicenses.scrollSpeed = 0
 LunaLicenses.licenseText = ""
 LunaLicenses.main()
 })(typeof exports != "undefined" ? exports : typeof window != "undefined" ? window : typeof self != "undefined" ? self : this, typeof window != "undefined" ? window : typeof global != "undefined" ? global : typeof self != "undefined" ? self : this)
